@@ -5,6 +5,7 @@ import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -250,25 +251,29 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             .set("padding", "2px var(--lumo-space-m)")
         ;
 
-//        createButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        createButton.setIcon(VaadinIcon.PLUS.create());
         createButton.addClickListener(e -> createNewArticle());
         createButton.setVisible(false);
 
-//        editButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        editButton.setIcon(VaadinIcon.EDIT.create());
         editButton.addClickListener(e -> enableEditMode());
         editButton.setVisible(false);
 
+        previewButton.setIcon(VaadinIcon.EYE.create());
         previewButton.addClickListener(e -> togglePreview());
         previewButton.setVisible(false);
 
-//        saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        saveButton.setIcon(VaadinIcon.CHECK.create());
+        saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         saveButton.addClickListener(e -> saveArticle());
         saveButton.setVisible(false);
 
+        cancelButton.setIcon(VaadinIcon.CLOSE.create());
         cancelButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
         cancelButton.addClickListener(e -> cancelEdit());
         cancelButton.setVisible(false);
 
+        deleteButton.setIcon(VaadinIcon.TRASH.create());
         deleteButton.addThemeVariants(ButtonVariant.LUMO_ERROR);
         deleteButton.addClickListener(e -> deleteArticle());
         deleteButton.setVisible(false);
@@ -435,9 +440,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             titleDisplay.setText(titleField.getValue());
             renderMarkdown(contentArea.getValue());
             previewButton.setText("Edit");
+            previewButton.setIcon(VaadinIcon.EDIT.create());
         } else {
             // Back to edit mode
             previewButton.setText("Preview");
+            previewButton.setIcon(VaadinIcon.EYE.create());
         }
 
         // Toggle visibility
