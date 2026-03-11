@@ -20,4 +20,4 @@ drivers/
 error-screenshots/
 webpack.generated.js
 /src/main/bundles
-/src/main/frontend
+/src/main/frontend/index.html

@@ -15,6 +15,10 @@ public class Article extends AbstractEntity {
     @Column(nullable = false)
     private String title;
 
+    @NotBlank
+    @Column(nullable = false, unique = true)
+    private String slug;
+
     @Lob
     @Column(length = 1000000)
     private String content;
@@ -49,6 +53,14 @@ public class Article extends AbstractEntity {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getSlug() {
+        return slug;
+    }
+
+    public void setSlug(String slug) {
+        this.slug = slug;
     }
 
     public String getContent() {
