@@ -1,0 +1,18 @@
+/* KnowledgeBase sidebar */
+.kb-sidebar {
+  background: var(--lumo-contrast-5pct);
+  border-right: 1px solid var(--lumo-contrast-10pct);
+  height: 100%;
+}
+
+/* KnowledgeBase content area */
+.kb-content-area {
+  background: var(--lumo-base-color);
+  height: 100%;
+}
+
+/* KnowledgeBase button bar - more prominent than sidebar */
+.kb-button-bar {
+  background: var(--lumo-contrast-5pct);
+  border-bottom: 1px solid var(--lumo-contrast-10pct);
+}

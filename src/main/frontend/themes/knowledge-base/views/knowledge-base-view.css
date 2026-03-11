@@ -193,3 +193,119 @@ vaadin-markdown pre,
 .knowledge-base-view pre {
   margin: var(--lumo-space-m) 0;
 }
+
+/* Wiki Content Theme */
+.wiki-content {
+  border: 1px solid var(--lumo-contrast-10pct);
+  border-radius: var(--lumo-border-radius-m);
+  padding: var(--lumo-space-l) var(--lumo-space-xl);
+  margin: var(--lumo-space-m) 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  line-height: 1.7;
+  max-width: 850px;
+}
+
+/* Headings */
+.wiki-content h1,
+.wiki-content h2,
+.wiki-content h3,
+.wiki-content h4 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  border-bottom: 1px solid var(--lumo-contrast-10pct);
+  padding-bottom: 0.3em;
+}
+
+.wiki-content h1 {
+  font-size: 2em;
+  margin-top: 0;
+}
+
+.wiki-content h2 {
+  font-size: 1.6em;
+}
+
+.wiki-content h3 {
+  font-size: 1.3em;
+}
+
+/* Paragraphs */
+.wiki-content p {
+  margin: 1em 0;
+}
+
+/* Links */
+.wiki-content a {
+  color: var(--lumo-primary-color);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.wiki-content a:hover {
+  border-bottom-color: var(--lumo-primary-color);
+}
+
+/* Lists */
+.wiki-content ul,
+.wiki-content ol {
+  margin: 1em 0;
+  padding-left: 2em;
+}
+
+.wiki-content li {
+  margin: 0.4em 0;
+}
+
+/* Blockquotes */
+.wiki-content blockquote {
+  margin: 1.5em 0;
+  padding: 1em 1.5em;
+  background: var(--lumo-primary-color-10pct);
+  border-left: 4px solid var(--lumo-primary-color);
+  border-radius: 0 var(--lumo-border-radius-s) var(--lumo-border-radius-s) 0;
+  font-style: italic;
+}
+
+/* Tables */
+.wiki-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5em 0;
+}
+
+.wiki-content th,
+.wiki-content td {
+  border: 1px solid var(--lumo-contrast-10pct);
+  padding: 0.75em 1em;
+  text-align: left;
+}
+
+.wiki-content th {
+  background: var(--lumo-contrast-5pct);
+  font-weight: 600;
+}
+
+/* Horizontal rules */
+.wiki-content hr {
+  border: none;
+  border-top: 1px solid var(--lumo-contrast-10pct);
+  margin: 2em 0;
+}
+
+/* Code blocks */
+.wiki-content pre {
+  background: var(--lumo-contrast-5pct);
+  border: 1px solid var(--lumo-contrast-10pct);
+  border-radius: var(--lumo-border-radius-m);
+  padding: var(--lumo-space-m);
+  overflow-x: auto;
+  margin: 1.5em 0;
+}
+
+.wiki-content pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+}

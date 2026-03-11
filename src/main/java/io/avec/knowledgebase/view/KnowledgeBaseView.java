@@ -137,20 +137,20 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         HorizontalLayout layout = new HorizontalLayout();
         layout.setSizeFull();
         layout.setPadding(false);
-//        layout.setSpacing(true);
+        layout.setSpacing(false);
 
         VerticalLayout rightPanel = createRightPanel();
 
         articleList.setSpacing(false);
         articleList.setPadding(false);
-        articleList.setWidthFull();
         articleList.setWidth("300px");
-        articleList.getStyle().set("border-right", "1px solid var(--lumo-contrast-10pct)");
+        articleList.setHeightFull();
+        articleList.addClassName("kb-sidebar");
 
         rightPanel.setSizeFull();
+        rightPanel.addClassName("kb-content-area");
 
         layout.add(articleList, rightPanel);
-layout.setSpacing(false);
 
         return layout;
     }
@@ -228,7 +228,8 @@ layout.setSpacing(false);
                 if (isMatch) {
                     div.getStyle()
                         .set("background-color", "var(--lumo-primary-color-10pct)")
-                        .set("font-weight", "600");
+                        .set("font-weight", "600")
+                        ;
                     selectedArticleDiv = div;
                 }
             }
@@ -242,13 +243,8 @@ layout.setSpacing(false);
         buttonBar.setJustifyContentMode(JustifyContentMode.END);
         buttonBar.setPadding(true);
         buttonBar.setSpacing(true);
+        buttonBar.addClassName("kb-button-bar");
         buttonBar.getStyle()
-                .set("background-color", "var(--lumo-contrast-5pct)")
-                .set("border-bottom", "1px solid var(--lumo-contrast-10pct)")
-//            .set("margin-top", "calc(var(--lumo-space-m) * -1)")
-//            .set("margin-right", "calc(var(--lumo-space-m) * -1)")
-//            .set("margin", "calc(var(--lumo-space-m) * -1)")
-//            .set("margin-bottom", "var(--lumo-space-m)")
             .set("padding", "2px var(--lumo-space-m)")
         ;
 
@@ -260,10 +256,11 @@ layout.setSpacing(false);
         editButton.addClickListener(e -> enableEditMode());
         editButton.setVisible(false);
 
-        saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+//        saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         saveButton.addClickListener(e -> saveArticle());
         saveButton.setVisible(false);
 
+        cancelButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
         cancelButton.addClickListener(e -> cancelEdit());
         cancelButton.setVisible(false);
 
@@ -292,19 +289,18 @@ layout.setSpacing(false);
         titleField.setWidthFull();
         titleField.setVisible(false);
 
-        // Content area (edit mode)
+        // Content area (edit mode) - monospace font for Markdown editing
         contentArea.setWidthFull();
-        contentArea.setHeight("400px");
+        contentArea.setHeight("500px");
         contentArea.setVisible(false);
+        contentArea.getStyle()
+            .set("font-family", "monospace")
+            .set("font-size", "0.9em")
+            .set("line-height", "1.5");
 
         // Markdown preview (read mode)
         markdownPreview.setWidthFull();
-        markdownPreview.getStyle()
-            .set("border", "1px solid var(--lumo-contrast-10pct)")
-            .set("padding", "var(--lumo-space-m)")
-            .set("border-radius", "var(--lumo-border-radius)")
-            .set("overflow-y", "auto")
-        ;
+        markdownPreview.addClassName("wiki-content");
 
         panel.add(titleDisplay, titleField, contentArea, markdownPreview);
 //        panel.setFlexGrow(1, markdownPreview);
