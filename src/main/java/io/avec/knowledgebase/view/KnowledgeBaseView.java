@@ -352,12 +352,15 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
     private void cancelEdit() {
         editMode = false;
+        previewMode = false;
         if (currentArticle != null && currentArticle.getId() != null) {
-            // Reload from database
-            articleService.findById(currentArticle.getId()).ifPresent(this::showArticle);
+            // Reload from database and navigate to article
+            articleService.findById(currentArticle.getId()).ifPresent(article -> {
+                getUI().ifPresent(ui -> ui.navigate("knowledge/" + article.getSlug()));
+            });
         } else {
-            currentArticle = null;
-            updateUI();
+            // No article or new article - go back to welcome
+            getUI().ifPresent(ui -> ui.navigate("knowledge/welcome-to-knowledge"));
         }
     }
 
