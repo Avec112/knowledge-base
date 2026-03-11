@@ -49,12 +49,14 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
     private final Button createButton = new Button("Create");
     private final Button editButton = new Button("Edit");
+    private final Button previewButton = new Button("Preview");
     private final Button saveButton = new Button("Save");
     private final Button cancelButton = new Button("Cancel");
     private final Button deleteButton = new Button("Delete");
 
     private Article currentArticle;
     private boolean editMode = false;
+    private boolean previewMode = false;
     private boolean isAdmin = false;
 
     public KnowledgeBaseView(ArticleService articleService, AuthenticatedUser authenticatedUser) {
@@ -256,6 +258,9 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         editButton.addClickListener(e -> enableEditMode());
         editButton.setVisible(false);
 
+        previewButton.addClickListener(e -> togglePreview());
+        previewButton.setVisible(false);
+
 //        saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         saveButton.addClickListener(e -> saveArticle());
         saveButton.setVisible(false);
@@ -268,7 +273,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         deleteButton.addClickListener(e -> deleteArticle());
         deleteButton.setVisible(false);
 
-        buttonBar.add(createButton, editButton, saveButton, cancelButton, deleteButton);
+        buttonBar.add(createButton, editButton, previewButton, saveButton, cancelButton, deleteButton);
         return buttonBar;
     }
 
@@ -390,6 +395,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         // Update button visibility
         createButton.setVisible(isAdmin);
         editButton.setVisible(hasArticle && !editMode && isAdmin);
+        previewButton.setVisible(editMode);
         saveButton.setVisible(editMode);
         cancelButton.setVisible(editMode);
         deleteButton.setVisible(hasId && isAdmin);
@@ -419,6 +425,26 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             contentArea.clear();
             markdownPreview.setContent("");
         }
+    }
+
+    private void togglePreview() {
+        previewMode = !previewMode;
+
+        if (previewMode) {
+            // Show preview - render current markdown from contentArea
+            titleDisplay.setText(titleField.getValue());
+            renderMarkdown(contentArea.getValue());
+            previewButton.setText("Edit");
+        } else {
+            // Back to edit mode
+            previewButton.setText("Preview");
+        }
+
+        // Toggle visibility
+        titleField.setVisible(!previewMode);
+        contentArea.setVisible(!previewMode);
+        titleDisplay.setVisible(previewMode);
+        markdownPreview.setVisible(previewMode);
     }
 
     private void renderMarkdown(String markdown) {
