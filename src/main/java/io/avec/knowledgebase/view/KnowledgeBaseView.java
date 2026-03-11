@@ -4,6 +4,7 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -66,6 +67,10 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         setPadding(false);
         setSpacing(false);
 
+        if(isAdmin) {
+            HorizontalLayout buttonBarLayout = createButtonBarLayout();
+            add(buttonBarLayout);
+        }
         HorizontalLayout mainLayout = createMainLayout();
         add(mainLayout);
 
@@ -73,9 +78,8 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     }
 
     @Override
-    public void setParameter(BeforeEvent event, @OptionalParameter String parameter) {
-        if (parameter != null && !parameter.isEmpty()) {
-            String slug = parameter;
+    public void setParameter(BeforeEvent event, @OptionalParameter String slug) {
+        if (slug != null && !slug.isEmpty()) {
 
             // Check if it's the welcome article
             if ("welcome-to-knowledge".equals(slug)) {
@@ -132,43 +136,23 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private HorizontalLayout createMainLayout() {
         HorizontalLayout layout = new HorizontalLayout();
         layout.setSizeFull();
-        layout.setSpacing(true);
+        layout.setPadding(false);
+//        layout.setSpacing(true);
 
-        VerticalLayout leftPanel = createLeftPanel();
         VerticalLayout rightPanel = createRightPanel();
-
-        leftPanel.setWidth("300px");
-        rightPanel.setSizeFull();
-
-        layout.add(leftPanel, rightPanel);
-        layout.setFlexGrow(0, leftPanel);
-        layout.setFlexGrow(1, rightPanel);
-
-        return layout;
-    }
-
-    private VerticalLayout createLeftPanel() {
-        VerticalLayout panel = new VerticalLayout();
-        panel.setSpacing(false);
-        panel.setPadding(false);
-        panel.getStyle().set("border-right", "1px solid var(--lumo-contrast-10pct)");
-
-        // Header
-        H2 header = new H2("Articles");
-        header.getStyle()
-            .set("margin", "0")
-            .set("padding", "var(--lumo-space-m)")
-            .set("font-size", "var(--lumo-font-size-l)")
-            .set("border-bottom", "1px solid var(--lumo-contrast-10pct)");
 
         articleList.setSpacing(false);
         articleList.setPadding(false);
         articleList.setWidthFull();
+        articleList.setWidth("300px");
+        articleList.getStyle().set("border-right", "1px solid var(--lumo-contrast-10pct)");
 
-        panel.add(header, articleList);
-        panel.setFlexGrow(1, articleList);
+        rightPanel.setSizeFull();
 
-        return panel;
+        layout.add(articleList, rightPanel);
+layout.setSpacing(false);
+
+        return layout;
     }
 
     private void refreshArticleList() {
@@ -251,22 +235,28 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         });
     }
 
-    private VerticalLayout createRightPanel() {
-        VerticalLayout panel = new VerticalLayout();
-        panel.setSizeFull();
-        panel.setPadding(true);
-        panel.setSpacing(true);
-
+    private HorizontalLayout createButtonBarLayout() {
         // Button bar
         HorizontalLayout buttonBar = new HorizontalLayout();
         buttonBar.setWidthFull();
         buttonBar.setJustifyContentMode(JustifyContentMode.END);
+        buttonBar.setPadding(true);
+        buttonBar.setSpacing(true);
+        buttonBar.getStyle()
+                .set("background-color", "var(--lumo-contrast-5pct)")
+                .set("border-bottom", "1px solid var(--lumo-contrast-10pct)")
+//            .set("margin-top", "calc(var(--lumo-space-m) * -1)")
+//            .set("margin-right", "calc(var(--lumo-space-m) * -1)")
+//            .set("margin", "calc(var(--lumo-space-m) * -1)")
+//            .set("margin-bottom", "var(--lumo-space-m)")
+            .set("padding", "2px var(--lumo-space-m)")
+        ;
 
-        createButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+//        createButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         createButton.addClickListener(e -> createNewArticle());
         createButton.setVisible(false);
 
-        editButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+//        editButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         editButton.addClickListener(e -> enableEditMode());
         editButton.setVisible(false);
 
@@ -282,6 +272,18 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         deleteButton.setVisible(false);
 
         buttonBar.add(createButton, editButton, saveButton, cancelButton, deleteButton);
+        return buttonBar;
+    }
+
+    private VerticalLayout createRightPanel() {
+        VerticalLayout panel = new VerticalLayout();
+        panel.setId("");
+        panel.setSizeFull();
+        panel.setPadding(true);
+        panel.setSpacing(true);
+//        panel.setMargin(false);
+
+
 
         // Title display (read mode)
         titleDisplay.getStyle().set("margin-top", "0");
@@ -296,15 +298,16 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         contentArea.setVisible(false);
 
         // Markdown preview (read mode)
+        markdownPreview.setWidthFull();
         markdownPreview.getStyle()
             .set("border", "1px solid var(--lumo-contrast-10pct)")
             .set("padding", "var(--lumo-space-m)")
             .set("border-radius", "var(--lumo-border-radius)")
             .set("overflow-y", "auto")
-            .set("flex-grow", "1");
+        ;
 
-        panel.add(buttonBar, titleDisplay, titleField, contentArea, markdownPreview);
-        panel.setFlexGrow(1, markdownPreview);
+        panel.add(titleDisplay, titleField, contentArea, markdownPreview);
+//        panel.setFlexGrow(1, markdownPreview);
 
         return panel;
     }
@@ -389,11 +392,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         boolean hasId = hasArticle && currentArticle.getId() != null;
 
         // Update button visibility
-        createButton.setVisible(isAdmin && !hasArticle);
+        createButton.setVisible(isAdmin);
         editButton.setVisible(hasArticle && !editMode && isAdmin);
         saveButton.setVisible(editMode);
         cancelButton.setVisible(editMode);
-        deleteButton.setVisible(hasId && editMode && isAdmin);
+        deleteButton.setVisible(hasId && isAdmin);
 
         // Update content visibility
         titleDisplay.setVisible(!editMode);
