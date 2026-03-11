@@ -1,3 +1,21 @@
+/* KnowledgeBase Layout Areas */
+.kb-sidebar {
+  background: var(--lumo-contrast-5pct);
+  border-right: 1px solid var(--lumo-contrast-10pct);
+  height: 100%;
+}
+
+.kb-content-area {
+  background: var(--lumo-base-color);
+  height: 100%;
+}
+
+.kb-button-bar {
+  background: var(--lumo-shade-20pct);
+  border-bottom: 1px solid var(--lumo-contrast-10pct);
+}
+
+/* View Container */
 .knowledge-base-view {
   padding: 2px;
   box-sizing: border-box;
@@ -164,41 +182,13 @@ vaadin-form-layout[empty] {
   min-height: 32px;
 }
 
-/* Markdown code styling */
-vaadin-markdown code,
-.knowledge-base-view code {
-  background-color: var(--lumo-contrast-10pct);
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 0.9em;
-  color: var(--lumo-error-text-color);
-  border: 1px solid var(--lumo-contrast-20pct);
-}
-
-vaadin-markdown pre code,
-.knowledge-base-view pre code {
-  display: block;
-  background-color: var(--lumo-contrast-5pct);
-  padding: var(--lumo-space-m);
-  border-radius: var(--lumo-border-radius-m);
-  overflow-x: auto;
-  color: var(--lumo-body-text-color);
-  border: 1px solid var(--lumo-contrast-20pct);
-  line-height: 1.5;
-  font-size: 0.875em;
-}
-
-vaadin-markdown pre,
-.knowledge-base-view pre {
-  margin: var(--lumo-space-m) 0;
-}
 
 /* Wiki Content Theme */
 .wiki-content {
   border: 1px solid var(--lumo-contrast-10pct);
+  background: var(--lumo-contrast-5pct);
   border-radius: var(--lumo-border-radius-m);
-  padding: var(--lumo-space-l) var(--lumo-space-xl);
+  padding: var(--lumo-space-l);
   margin: var(--lumo-space-m) 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   line-height: 1.7;
@@ -296,7 +286,7 @@ vaadin-markdown pre,
 
 /* Code blocks */
 .wiki-content pre {
-  background: var(--lumo-contrast-5pct);
+  background: var(--lumo-shade-20pct);
   border: 1px solid var(--lumo-contrast-10pct);
   border-radius: var(--lumo-border-radius-m);
   padding: var(--lumo-space-m);
