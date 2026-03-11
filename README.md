@@ -1,7 +1,16 @@
-# App
+# KnowledgeBase
 
-This project can be used as a starting point to create your own Vaadin application with Spring Boot.
-It contains all the necessary configuration and some placeholder files to get you started.
+A modern wiki/knowledge base application built with Vaadin Flow and Spring Boot. This application provides a clean, markdown-based documentation system with role-based access control.
+
+## Features
+
+- **Markdown Support**: Write and preview articles using Markdown syntax with live preview
+- **Role-Based Access**: Admin users can create, edit, and delete articles; regular users have read-only access
+- **SEO-Friendly URLs**: Article URLs use human-readable slugs instead of IDs
+- **Dark Mode UI**: Modern dark theme with optimized readability for wiki content
+- **Live Preview**: Toggle between edit and preview mode while writing
+- **Article Management**: Full CRUD operations for managing documentation
+- **Default Welcome Page**: New users are greeted with a comprehensive Markdown guide
 
 ## Running the application
 
@@ -28,24 +37,52 @@ You then launch the application using
 java -jar target/knowledge-base-1.0-SNAPSHOT.jar
 ```
 
-## Project structure
+## Technology Stack
 
-- `MainLayout.java` in `src/main/java` contains the navigation setup (i.e., the
-  side/top bar and the main menu). This setup uses
-  [App Layout](https://vaadin.com/docs/components/app-layout).
-- `views` package in `src/main/java` contains the server-side Java views of your application.
-- `views` folder in `src/main/frontend` contains the client-side JavaScript views of your application.
-- `themes` folder in `src/main/frontend` contains the custom CSS styles.
+- **Vaadin Flow 25.0.7**: Modern Java web framework with Material Design components
+- **Spring Boot 4.0.3**: Application framework with dependency injection
+- **Spring Data JPA**: Database persistence layer
+- **Spring Security**: Role-based authentication and authorization
+- **H2 Database**: In-memory database (easily replaceable with production database)
+- **Java 21**: Modern Java features and performance
 
-## Useful links
+## Project Structure
 
-- Read the documentation at [vaadin.com/docs](https://vaadin.com/docs).
-- Follow the tutorial at [vaadin.com/docs/latest/tutorial/overview](https://vaadin.com/docs/latest/tutorial/overview).
-- Create new projects at [start.vaadin.com](https://start.vaadin.com/).
-- Search UI components and their usage examples at [vaadin.com/docs/latest/components](https://vaadin.com/docs/latest/components).
-- View use case applications that demonstrate Vaadin capabilities at [vaadin.com/examples-and-demos](https://vaadin.com/examples-and-demos).
-- Build any UI without custom CSS by discovering Vaadin's set of [CSS utility classes](https://vaadin.com/docs/styling/lumo/utility-classes). 
-- Find a collection of solutions to common use cases at [cookbook.vaadin.com](https://cookbook.vaadin.com/).
-- Find add-ons at [vaadin.com/directory](https://vaadin.com/directory).
-- Ask questions on [Stack Overflow](https://stackoverflow.com/questions/tagged/vaadin) or join our [Forum](https://vaadin.com/forum).
-- Report issues, create pull requests in [GitHub](https://github.com/vaadin).
+### Backend (Java)
+- `io.avec.knowledgebase.data.Article`: Entity representing wiki articles with slug generation
+- `io.avec.knowledgebase.service.ArticleService`: Business logic for article management
+- `io.avec.knowledgebase.view.KnowledgeBaseView`: Main view with article list and Markdown rendering
+- `io.avec.security`: Spring Security configuration with role-based access
+
+### Frontend (CSS)
+- `src/main/frontend/themes/knowledge-base/views/knowledge-base-view.css`: Main styling for wiki content and UI components
+- `src/main/resources/knowledge/welcome-to-knowledge.md`: Default welcome content with Markdown guide
+
+## Usage
+
+### Default Users
+The application comes with two default users:
+- **Admin**: `admin@avec.io` / `admin` (can create, edit, and delete articles)
+- **User**: `user@avec.io` / `user` (read-only access)
+
+### Creating Articles
+1. Log in as an admin user
+2. Click the "Create" button in the toolbar
+3. Enter a title and content using Markdown syntax
+4. Click "Preview" to see how it will look
+5. Click "Save" to publish the article
+
+### Editing Articles
+1. Navigate to an article
+2. Click the "Edit" button (admin only)
+3. Modify the content
+4. Use "Preview" to check your changes
+5. Click "Save" to update or "Cancel" to discard changes
+
+## Customization
+
+This application is designed as a reusable module that can be integrated into larger Vaadin applications. The KnowledgeBase module is self-contained and can be easily adapted to different use cases.
+
+## License
+
+This project is a pilot/demonstration application.
