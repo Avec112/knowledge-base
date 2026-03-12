@@ -2,6 +2,7 @@ package io.avec.knowledgebase.view;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
@@ -14,7 +15,9 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.*;
 import io.avec.data.Role;
 import io.avec.knowledgebase.data.Article;
+import io.avec.knowledgebase.data.Category;
 import io.avec.knowledgebase.service.ArticleService;
+import io.avec.knowledgebase.service.CategoryService;
 import io.avec.security.AuthenticatedUser;
 import io.avec.views.MainLayout;
 import jakarta.annotation.security.PermitAll;
@@ -38,10 +41,12 @@ import java.util.Optional;
 public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter<String> {
 
     private final ArticleService articleService;
+    private final CategoryService categoryService;
     private final AuthenticatedUser authenticatedUser;
 
     private final VerticalLayout articleList = new VerticalLayout();
     private final TextField titleField = new TextField("Title");
+    private final ComboBox<Category> categoryField = new ComboBox<>("Category");
     private final TextArea contentArea = new TextArea("Content (Markdown)");
     private final Markdown markdownPreview = new Markdown("");
     private final H2 titleDisplay = new H2();
@@ -60,8 +65,9 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private boolean previewMode = false;
     private boolean isAdmin = false;
 
-    public KnowledgeBaseView(ArticleService articleService, AuthenticatedUser authenticatedUser) {
+    public KnowledgeBaseView(ArticleService articleService, CategoryService categoryService, AuthenticatedUser authenticatedUser) {
         this.articleService = articleService;
+        this.categoryService = categoryService;
         this.authenticatedUser = authenticatedUser;
 
         checkAdminRole();
@@ -166,12 +172,85 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         welcomeDiv.getElement().setAttribute("data-welcome", "true");
         articleList.add(welcomeDiv);
 
-        // Add regular articles
-        List<Article> articles = isAdmin ? articleService.findAll() : articleService.findPublished();
-        for (Article article : articles) {
-            Div articleDiv = createArticleListItem(article.getTitle(), article.getSlug(), article);
-            articleList.add(articleDiv);
+        try {
+            // Get root categories
+            List<Category> rootCategories = categoryService.findRootCategories();
+            System.out.println("Found " + rootCategories.size() + " root categories");
+
+            // Add categories and their articles
+            for (Category category : rootCategories) {
+                System.out.println("Processing category: " + category.getName());
+                // Add category header
+                Div categoryHeader = createCategoryHeader(category);
+                articleList.add(categoryHeader);
+
+                // Add articles in this category
+                List<Article> articles = isAdmin ?
+                    articleService.findByCategory(category) :
+                    articleService.findByCategoryAndPublished(category);
+                System.out.println("  Found " + articles.size() + " articles in category: " + category.getName());
+
+                for (Article article : articles) {
+                    Div articleDiv = createArticleListItem(article.getTitle(), article.getSlug(), article);
+                    articleDiv.getStyle().set("padding-left", "var(--lumo-space-l)");
+                    articleList.add(articleDiv);
+                }
+
+            // Add subcategories if they exist
+            for (Category child : category.getChildren()) {
+                Div childCategoryHeader = createCategoryHeader(child);
+                childCategoryHeader.getStyle().set("padding-left", "var(--lumo-space-l)");
+                articleList.add(childCategoryHeader);
+
+                List<Article> childArticles = isAdmin ?
+                    articleService.findByCategory(child) :
+                    articleService.findByCategoryAndPublished(child);
+
+                for (Article article : childArticles) {
+                    Div articleDiv = createArticleListItem(article.getTitle(), article.getSlug(), article);
+                    articleDiv.getStyle().set("padding-left", "var(--lumo-space-xl)");
+                    articleList.add(articleDiv);
+                }
+            }
         }
+
+            // Add uncategorized articles at the end
+            List<Article> uncategorized = articleService.findUncategorized();
+            System.out.println("Found " + uncategorized.size() + " uncategorized articles");
+            if (!uncategorized.isEmpty()) {
+                Div uncategorizedHeader = new Div();
+                uncategorizedHeader.setText("Ukategorisert");
+                uncategorizedHeader.getStyle()
+                    .set("font-weight", "600")
+                    .set("padding", "var(--lumo-space-s) var(--lumo-space-m)")
+                    .set("color", "var(--lumo-secondary-text-color)")
+                    .set("font-size", "var(--lumo-font-size-s)")
+                    .set("text-transform", "uppercase");
+                articleList.add(uncategorizedHeader);
+
+                for (Article article : uncategorized) {
+                    Div articleDiv = createArticleListItem(article.getTitle(), article.getSlug(), article);
+                    articleList.add(articleDiv);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error refreshing article list: " + e.getMessage());
+            e.printStackTrace();
+            Notification.show("Error loading articles: " + e.getMessage());
+        }
+    }
+
+    private Div createCategoryHeader(Category category) {
+        Div header = new Div();
+        header.setText(category.getName());
+        header.getStyle()
+            .set("font-weight", "600")
+            .set("padding", "var(--lumo-space-s) var(--lumo-space-m)")
+            .set("color", "var(--lumo-secondary-text-color)")
+            .set("font-size", "var(--lumo-font-size-s)")
+            .set("text-transform", "uppercase")
+            .set("margin-top", "var(--lumo-space-m)");
+        return header;
     }
 
     private Div createArticleListItem(String title, String slug, Article article) {
@@ -299,9 +378,17 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         titleField.setWidthFull();
         titleField.setVisible(false);
 
+        // Category field (edit mode)
+        categoryField.setWidthFull();
+        categoryField.setItems(categoryService.findAll());
+        categoryField.setItemLabelGenerator(Category::getName);
+        categoryField.setPlaceholder("Select a category (optional)");
+        categoryField.setClearButtonVisible(true);
+        categoryField.setVisible(false);
+
         // Content area (edit mode) - monospace font for Markdown editing
         contentArea.setWidthFull();
-        contentArea.setHeight("500px");
+        contentArea.setHeight("400px");
         contentArea.setVisible(false);
         contentArea.getStyle()
             .set("font-family", "monospace")
@@ -312,7 +399,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         markdownPreview.setWidthFull();
         markdownPreview.addClassName("wiki-content");
 
-        panel.add(titleDisplay, titleField, contentArea, markdownPreview);
+        panel.add(titleDisplay, titleField, categoryField, contentArea, markdownPreview);
 //        panel.setFlexGrow(1, markdownPreview);
 
         return panel;
@@ -370,6 +457,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         }
 
         currentArticle.setTitle(titleField.getValue());
+        currentArticle.setCategory(categoryField.getValue());
         currentArticle.setContent(contentArea.getValue());
 
         try {
@@ -411,6 +499,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         // Update content visibility
         titleDisplay.setVisible(!editMode);
         titleField.setVisible(editMode);
+        categoryField.setVisible(editMode);
         contentArea.setVisible(editMode);
         markdownPreview.setVisible(!editMode);
 
@@ -418,6 +507,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             // Update title and content for articles
             if (editMode) {
                 titleField.setValue(currentArticle.getTitle() != null ? currentArticle.getTitle() : "");
+                categoryField.setValue(currentArticle.getCategory());
                 contentArea.setValue(currentArticle.getContent() != null ? currentArticle.getContent() : "");
             } else {
                 titleDisplay.setText(currentArticle.getTitle() != null ? currentArticle.getTitle() : "");
@@ -452,6 +542,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
         // Toggle visibility
         titleField.setVisible(!previewMode);
+        categoryField.setVisible(!previewMode);
         contentArea.setVisible(!previewMode);
         titleDisplay.setVisible(previewMode);
         markdownPreview.setVisible(previewMode);

@@ -2,6 +2,7 @@ package io.avec.knowledgebase.service;
 
 import io.avec.knowledgebase.data.Article;
 import io.avec.knowledgebase.data.ArticleRepository;
+import io.avec.knowledgebase.data.Category;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,18 @@ public class ArticleService {
 
     public List<Article> findPublished() {
         return articleRepository.findByPublishedTrueOrderByUpdatedAtDesc();
+    }
+
+    public List<Article> findByCategory(Category category) {
+        return articleRepository.findByCategoryOrderBySortOrder(category);
+    }
+
+    public List<Article> findByCategoryAndPublished(Category category) {
+        return articleRepository.findByCategoryAndPublishedTrueOrderBySortOrder(category);
+    }
+
+    public List<Article> findUncategorized() {
+        return articleRepository.findByCategoryIsNullOrderBySortOrder();
     }
 
     public Optional<Article> findById(Long id) {

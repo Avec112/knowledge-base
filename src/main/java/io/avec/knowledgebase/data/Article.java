@@ -4,6 +4,7 @@ import io.avec.data.AbstractEntity;
 import io.avec.data.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 
@@ -19,8 +20,8 @@ public class Article extends AbstractEntity {
     @Column(nullable = false, unique = true)
     private String slug;
 
-    @Lob
-    @Column(length = 1000000)
+    @Size(max=20000)
+    @Column(length = 20000)
     private String content;
 
     @ManyToOne
@@ -35,6 +36,13 @@ public class Article extends AbstractEntity {
 
     @Column(nullable = false)
     private boolean published = false;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    private Category category;
+
+    @Column(nullable = false)
+    private Integer sortOrder = 0;
 
     @PrePersist
     protected void onCreate() {
@@ -101,5 +109,21 @@ public class Article extends AbstractEntity {
 
     public void setPublished(boolean published) {
         this.published = published;
+    }
+
+    public Category getCategory() {
+        return category;
+    }
+
+    public void setCategory(Category category) {
+        this.category = category;
+    }
+
+    public Integer getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(Integer sortOrder) {
+        this.sortOrder = sortOrder;
     }
 }
