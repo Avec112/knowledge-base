@@ -4,6 +4,7 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Span;
@@ -32,11 +33,16 @@ import io.avec.views.MainLayout;
 import jakarta.annotation.security.PermitAll;
 import org.vaadin.lineawesome.LineAwesomeIconUrl;
 import com.vaadin.flow.component.markdown.Markdown;
+import com.vaadin.flow.server.StreamResource;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +52,8 @@ import java.util.ArrayList;
 import java.util.function.Consumer;
 
 import java.util.Optional;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @PageTitle("KnowledgeBase")
 @Route(value = "knowledge", layout = MainLayout.class)
@@ -83,6 +91,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final Button cancelButton = new Button("Cancel");
     private final Button deleteButton = new Button("Delete");
     private final Button deleteCategoryButton = new Button("Delete");
+    private final Button exportButton = new Button("Export");
 
     private Article currentArticle;
     private Category currentCategory;
@@ -92,6 +101,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private static final String WELCOME_SLUG = "welcome-to-knowledge";
     private static final String CREATE_CATEGORY_SLUG = "__create_category__";
     private static final DateTimeFormatter METADATA_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final DateTimeFormatter EXPORT_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     public KnowledgeBaseView(ArticleService articleService, CategoryService categoryService, AuthenticatedUser authenticatedUser) {
         this.articleService = articleService;
@@ -315,18 +325,124 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         deleteCategoryButton.addClickListener(e -> deleteCategory());
         deleteCategoryButton.setVisible(false);
 
+        exportButton.setIcon(VaadinIcon.DOWNLOAD_ALT.create());
+        Anchor exportLink = new Anchor(createExportResource(), "");
+        exportLink.getElement().setAttribute("download", true);
+        exportLink.add(exportButton);
+
         HorizontalLayout categoryButtons = new HorizontalLayout(createCategoryButton, editCategoryButton, deleteCategoryButton);
         categoryButtons.setSpacing(true);
         categoryButtons.setPadding(false);
         categoryButtons.setMargin(false);
 
-        HorizontalLayout articleButtons = new HorizontalLayout(createButton, editButton, previewButton, saveButton, cancelButton, deleteButton);
+        HorizontalLayout articleButtons = new HorizontalLayout(createButton, editButton, previewButton, saveButton, cancelButton, deleteButton, exportLink);
         articleButtons.setSpacing(true);
         articleButtons.setPadding(false);
         articleButtons.setMargin(false);
 
         buttonBar.add(categoryButtons, articleButtons);
         return buttonBar;
+    }
+
+    private StreamResource createExportResource() {
+        String exportFileName = LocalDate.now().format(EXPORT_DATE_FORMAT) + "-knowledge-base-export.zip";
+        return new StreamResource(exportFileName, () -> {
+            try {
+                return new ByteArrayInputStream(generateExportZipBytes());
+            } catch (IOException e) {
+                return new ByteArrayInputStream(new byte[0]);
+            }
+        });
+    }
+
+    private byte[] generateExportZipBytes() throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(baos, StandardCharsets.UTF_8)) {
+            addWelcomeEntry(zip);
+
+            List<Category> rootCategories = categoryService.findRootCategories();
+            for (Category category : rootCategories) {
+                addCategoryEntries(zip, category);
+            }
+
+            addUncategorizedEntries(zip);
+        }
+        return baos.toByteArray();
+    }
+
+    private void addWelcomeEntry(ZipOutputStream zip) throws IOException {
+        InputStream is = getClass().getClassLoader().getResourceAsStream("knowledge/welcome-to-knowledge.md");
+        String content = "";
+        if (is != null) {
+            content = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
+                .lines()
+                .collect(Collectors.joining("\n"));
+        }
+        writeZipEntry(zip, "welcome.md", content);
+    }
+
+    private void addCategoryEntries(ZipOutputStream zip, Category category) throws IOException {
+        String categoryFolder = sanitizePathSegment(category.getName());
+        if (categoryFolder.isBlank()) {
+            categoryFolder = "category-" + category.getId();
+        }
+        ensureDirectoryEntry(zip, categoryFolder + "/");
+
+        List<Article> articles = isAdmin
+            ? articleService.findByCategory(category)
+            : articleService.findByCategoryAndPublished(category);
+
+        for (Article article : articles) {
+            String fileName = buildArticleFileName(article);
+            writeZipEntry(zip, categoryFolder + "/" + fileName, article.getContent());
+        }
+    }
+
+    private void addUncategorizedEntries(ZipOutputStream zip) throws IOException {
+        List<Article> uncategorized = articleService.findUncategorized();
+        for (Article article : uncategorized) {
+            if (!isAdmin && !article.isPublished()) {
+                continue;
+            }
+            String fileName = buildArticleFileName(article);
+            writeZipEntry(zip, fileName, article.getContent());
+        }
+    }
+
+    private String buildArticleFileName(Article article) {
+        String baseName = article.getSlug();
+        if (baseName == null || baseName.isBlank()) {
+            baseName = sanitizePathSegment(article.getTitle());
+        }
+        if (baseName == null || baseName.isBlank()) {
+            baseName = "article-" + article.getId();
+        }
+        return sanitizePathSegment(baseName) + ".md";
+    }
+
+    private void writeZipEntry(ZipOutputStream zip, String path, String content) throws IOException {
+        ZipEntry entry = new ZipEntry(path);
+        zip.putNextEntry(entry);
+        byte[] bytes = (content != null ? content : "").getBytes(StandardCharsets.UTF_8);
+        zip.write(bytes);
+        zip.closeEntry();
+    }
+
+    private void ensureDirectoryEntry(ZipOutputStream zip, String path) throws IOException {
+        ZipEntry entry = new ZipEntry(path);
+        zip.putNextEntry(entry);
+        zip.closeEntry();
+    }
+
+    private String sanitizePathSegment(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input
+            .trim()
+            .replaceAll("[\\\\/:*?\"<>|]", "-")
+            .replaceAll("\\s+", " ")
+            .replaceAll("^\\.+|\\.+$", "");
     }
 
     private void refreshCategoryFieldItems() {

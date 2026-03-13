@@ -72,7 +72,7 @@ insert into kb_article (version, id, title, slug, content, created_by_id, create
 7. **Rettigheter per kategori**. Enkel tilgangsstyring (kun admin/kun intern/alle).
 8. **Bruksinnsikt**. Mest leste artikler, null-resultat-sok, "nylig oppdatert".
 9. **Kvalitetsmaler**. Standard mal ved opprettelse (Problem, Losning, Eksempel, Referanser).
-10. **Import/eksport**. Markdown-import og backup/restore av knowledge base.', 1, '2026-01-01 10:30:00', '2026-01-01 10:30:00', 1, 'PUBLISHED', 13, 1)
+10. **Import/~~eksport~~**. Markdown-import og backup/restore av knowledge base.', 1, '2026-01-01 10:30:00', '2026-01-01 10:30:00', 1, 'PUBLISHED', 13, 1)
 
 
 
