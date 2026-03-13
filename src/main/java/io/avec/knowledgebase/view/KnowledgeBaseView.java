@@ -10,6 +10,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
@@ -60,9 +61,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final Markdown markdownPreview = new Markdown("");
     private final H2 titleDisplay = new H2();
     private final ComboBox<WikiType> menuSearch = new ComboBox<>();
+    private final Button toggleCategoriesButton = new Button();
     private final Map<String, WikiType> nodeBySlug = new HashMap<>();
     private final Map<WikiType, WikiType> parentByNode = new HashMap<>();
     private final List<WikiType> quickJumpItems = new ArrayList<>();
+    private final List<WikiType> categoryNodes = new ArrayList<>();
     private WikiType welcomeNode;
     private WikiType draggedNode;
 
@@ -186,6 +189,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         nodeBySlug.clear();
         parentByNode.clear();
         quickJumpItems.clear();
+        categoryNodes.clear();
         TreeData<WikiType> treeData = new TreeData<>();
         refreshCategoryFieldItems();
 
@@ -202,6 +206,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
                 treeData.addItem(null, categoryNode);
                 parentByNode.put(categoryNode, null);
                 quickJumpItems.add(categoryNode);
+                categoryNodes.add(categoryNode);
                 addCategoryChildren(treeData, categoryNode, category);
             }
 
@@ -223,6 +228,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             articleTree.setTreeData(treeData);
             menuSearch.setItems(quickJumpItems);
             menuSearch.clear();
+            updateCategoryToggleButton();
         } catch (Exception e) {
             System.err.println("Error refreshing article list: " + e.getMessage());
             e.printStackTrace();
@@ -649,7 +655,17 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
                 .findFirst()
                 .ifPresent(this::handleQuickJump);
         });
-        menuColumn.setHeader(menuSearch);
+        toggleCategoriesButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE, ButtonVariant.LUMO_SMALL);
+        toggleCategoriesButton.addClickListener(event -> toggleAllCategories());
+
+        VerticalLayout menuHeader = new VerticalLayout(menuSearch, toggleCategoriesButton);
+        menuHeader.setPadding(false);
+        menuHeader.setSpacing(false);
+        menuHeader.setMargin(false);
+        menuHeader.setAlignItems(FlexComponent.Alignment.START);
+        menuHeader.setWidthFull();
+        menuHeader.getStyle().set("gap", "var(--lumo-space-xs)");
+        menuColumn.setHeader(menuHeader);
         menuColumn.setRenderer(new ComponentRenderer<>(node -> {
                 HorizontalLayout itemLayout = new HorizontalLayout();
                 itemLayout.setSpacing(true);
@@ -693,7 +709,9 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         articleTree.setAllRowsVisible(true);
         configureCategoryDragAndDrop();
         articleTree.addExpandListener(event -> articleTree.getDataProvider().refreshAll());
+        articleTree.addExpandListener(event -> updateCategoryToggleButton());
         articleTree.addCollapseListener(event -> articleTree.getDataProvider().refreshAll());
+        articleTree.addCollapseListener(event -> updateCategoryToggleButton());
         articleTree.addSelectionListener(event -> {
             event.getFirstSelectedItem().ifPresent(node -> {
                 if (node.type() == WikiNodeType.WELCOME) {
@@ -836,6 +854,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             treeData.addItem(parentNode, childCategoryNode);
             parentByNode.put(childCategoryNode, parentNode);
             quickJumpItems.add(childCategoryNode);
+            categoryNodes.add(childCategoryNode);
             addCategoryChildren(treeData, childCategoryNode, child);
         }
     }
@@ -857,6 +876,38 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         while (parent != null) {
             articleTree.expand(parent);
             parent = parentByNode.get(parent);
+        }
+    }
+
+    private void toggleAllCategories() {
+        if (categoryNodes.isEmpty()) {
+            return;
+        }
+        boolean allExpanded = categoryNodes.stream().allMatch(articleTree::isExpanded);
+        if (allExpanded) {
+            articleTree.collapse(categoryNodes);
+        } else {
+            articleTree.expand(categoryNodes);
+        }
+        updateCategoryToggleButton();
+    }
+
+    private void updateCategoryToggleButton() {
+        if (categoryNodes.isEmpty()) {
+            toggleCategoriesButton.setText("No categories");
+            toggleCategoriesButton.setEnabled(false);
+            toggleCategoriesButton.setIcon(VaadinIcon.FOLDER.create());
+            return;
+        }
+
+        toggleCategoriesButton.setEnabled(true);
+        boolean allExpanded = categoryNodes.stream().allMatch(articleTree::isExpanded);
+        if (allExpanded) {
+            toggleCategoriesButton.setText("Collapse all");
+            toggleCategoriesButton.setIcon(VaadinIcon.CARET_DOWN.create());
+        } else {
+            toggleCategoriesButton.setText("Expand all");
+            toggleCategoriesButton.setIcon(VaadinIcon.CARET_RIGHT.create());
         }
     }
 
