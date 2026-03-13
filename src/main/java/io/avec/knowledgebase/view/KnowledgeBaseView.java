@@ -69,10 +69,15 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final TextField titleField = new TextField("Title");
     private final ComboBox<Category> categoryField = new ComboBox<>("Category");
     private final ComboBox<ArticleStatus> statusField = new ComboBox<>("Status");
-    private final TextArea contentArea = new TextArea("Content (Markdown)");
+    private final TextArea contentArea = new TextArea();
+    private final HorizontalLayout contentHeader = new HorizontalLayout();
+    private final Button markdownHelpToggleButton = new Button(VaadinIcon.INFO_CIRCLE_O.create());
+    private final HorizontalLayout contentEditorLayout = new HorizontalLayout();
+    private final Markdown markdownHelpPreview = new Markdown("");
     private final Markdown markdownPreview = new Markdown("");
     private final H2 titleDisplay = new H2();
     private final Div metadataDisplay = new Div();
+    private final Div markdownHelpPanel = new Div();
     private final ComboBox<WikiType> menuSearch = new ComboBox<>();
     private final Button toggleCategoriesButton = new Button();
     private final Map<String, WikiType> nodeBySlug = new HashMap<>();
@@ -99,9 +104,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private boolean previewMode = false;
     private boolean isAdmin = false;
     private static final String WELCOME_SLUG = "welcome-to-knowledge";
+    private static final String MARKDOWN_HELP_SLUG = "markdown-syntax";
     private static final String CREATE_CATEGORY_SLUG = "__create_category__";
     private static final DateTimeFormatter METADATA_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final DateTimeFormatter EXPORT_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private boolean markdownHelpVisible = false;
 
     public KnowledgeBaseView(ArticleService articleService, CategoryService categoryService, AuthenticatedUser authenticatedUser) {
         this.articleService = articleService;
@@ -518,6 +525,22 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         statusField.setVisible(false);
 
         // Content area (edit mode) - monospace font for Markdown editing
+        contentHeader.setWidthFull();
+        contentHeader.setPadding(false);
+        contentHeader.setSpacing(true);
+        contentHeader.setMargin(false);
+        contentHeader.setAlignItems(Alignment.CENTER);
+        Span contentHeaderLabel = new Span("Content (Markdown)");
+        contentHeaderLabel.getStyle().set("font-weight", "600");
+        markdownHelpToggleButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE, ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ICON);
+        markdownHelpToggleButton.getElement().setProperty("title", "Markdown syntax help");
+        markdownHelpToggleButton.getElement().setAttribute("aria-label", "Markdown syntax help");
+        markdownHelpToggleButton.addClickListener(event -> toggleMarkdownHelp());
+        contentHeader.add(contentHeaderLabel, markdownHelpToggleButton);
+        contentHeader.setVisible(false);
+
+        contentArea.setLabel(null);
+        contentArea.setAriaLabel("Content (Markdown)");
         contentArea.setWidthFull();
         contentArea.setHeight("400px");
         contentArea.setVisible(false);
@@ -526,11 +549,30 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             .set("font-size", "0.9em")
             .set("line-height", "1.5");
 
+        markdownHelpPreview.setContent(loadMarkdownHelpContent());
+        markdownHelpPreview.addClassName("wiki-content");
+        markdownHelpPreview.addClassName("markdown-help-content");
+
+        markdownHelpPanel.addClassName("markdown-help-panel");
+        markdownHelpPanel.add(markdownHelpPreview);
+        markdownHelpPanel.setVisible(false);
+
+        contentEditorLayout.addClassName("content-editor-layout");
+        contentEditorLayout.setWidthFull();
+        contentEditorLayout.setPadding(false);
+        contentEditorLayout.setSpacing(true);
+        contentEditorLayout.setMargin(false);
+        contentEditorLayout.setAlignItems(Alignment.STRETCH);
+        contentEditorLayout.add(contentArea, markdownHelpPanel);
+        contentEditorLayout.setFlexGrow(1, contentArea);
+        contentEditorLayout.setFlexGrow(0, markdownHelpPanel);
+        contentEditorLayout.setVisible(false);
+
         // Markdown preview (read mode)
         markdownPreview.setWidthFull();
         markdownPreview.addClassName("wiki-content");
 
-        panel.add(titleDisplay, titleField, categoryField, statusField, contentArea, markdownPreview);
+        panel.add(titleDisplay, titleField, categoryField, statusField, contentHeader, contentEditorLayout, markdownPreview);
         metadataDisplay.addClassName("article-metadata");
         panel.addComponentAtIndex(1, metadataDisplay);
 //        panel.setFlexGrow(1, markdownPreview);
@@ -571,12 +613,16 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             return;
         }
         editMode = true;
+        previewMode = false;
+        previewButton.setText("Preview");
+        previewButton.setIcon(VaadinIcon.FILE_O.create());
         updateUI();
     }
 
     private void cancelEdit() {
         editMode = false;
         previewMode = false;
+        markdownHelpVisible = false;
         if (currentArticle != null && currentArticle.getId() != null) {
             // Reload from database and navigate to article
             articleService.findById(currentArticle.getId()).ifPresent(article -> {
@@ -751,12 +797,16 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         deleteCategoryButton.setVisible(hasCategory && !editMode && isAdmin);
 
         // Update content visibility
-        titleDisplay.setVisible(!editMode);
-        titleField.setVisible(editMode);
-        categoryField.setVisible(editMode);
-        statusField.setVisible(editMode);
-        contentArea.setVisible(editMode);
-        markdownPreview.setVisible(!editMode);
+        boolean showEditor = editMode && !previewMode;
+        titleDisplay.setVisible(!editMode || previewMode);
+        titleField.setVisible(showEditor);
+        categoryField.setVisible(showEditor);
+        statusField.setVisible(showEditor);
+        contentHeader.setVisible(showEditor);
+        contentArea.setVisible(showEditor);
+        contentEditorLayout.setVisible(showEditor);
+        markdownHelpPanel.setVisible(showEditor && markdownHelpVisible);
+        markdownPreview.setVisible(!editMode || previewMode);
         metadataDisplay.setVisible(!editMode && hasArticle);
 
         if (hasArticle) {
@@ -793,11 +843,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             titleDisplay.setText(titleField.getValue());
             renderMarkdown(contentArea.getValue());
             previewButton.setText("Edit");
-            previewButton.setIcon(VaadinIcon.EDIT.create());
+            previewButton.setIcon(VaadinIcon.FILE_O.create());
         } else {
             // Back to edit mode
             previewButton.setText("Preview");
-            previewButton.setIcon(VaadinIcon.EYE.create());
+            previewButton.setIcon(VaadinIcon.FILE_O.create());
         }
 
         // Toggle visibility
@@ -805,8 +855,65 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         categoryField.setVisible(!previewMode);
         statusField.setVisible(!previewMode);
         contentArea.setVisible(!previewMode);
+        contentHeader.setVisible(!previewMode);
+        contentEditorLayout.setVisible(!previewMode);
+        markdownHelpPanel.setVisible(!previewMode && markdownHelpVisible);
         titleDisplay.setVisible(previewMode);
         markdownPreview.setVisible(previewMode);
+    }
+
+    private void toggleMarkdownHelp() {
+        markdownHelpVisible = !markdownHelpVisible;
+        if (markdownHelpVisible) {
+            markdownHelpPreview.setContent(loadMarkdownHelpContent());
+        }
+        if (editMode && !previewMode) {
+            markdownHelpPanel.setVisible(markdownHelpVisible);
+        }
+    }
+
+    private String loadMarkdownHelpContent() {
+        return articleService.findBySlug(MARKDOWN_HELP_SLUG)
+            .map(Article::getContent)
+            .filter(content -> content != null && !content.isBlank())
+            .orElse("""
+                # Markdown syntax
+
+                Use these raw markdown examples while writing.
+
+                ## Headings
+                ````text
+                # Heading 1
+                ## Heading 2
+                ### Heading 3
+                ````
+
+                ## Emphasis
+                ````text
+                **bold**
+                *italic*
+                ~~strikethrough~~
+                ````
+
+                ## Lists
+                ````text
+                - Bullet item
+                - Another item
+                1. Numbered item
+                2. Next item
+                ````
+
+                ## Links and images
+                ````text
+                [Knowledge Base](https://example.com)
+                ![Alt text](https://via.placeholder.com/160x80)
+                ````
+
+                ## Horizontal rule
+                ````text
+                ***
+                ````
+                """);
     }
 
     private void renderMarkdown(String markdown) {

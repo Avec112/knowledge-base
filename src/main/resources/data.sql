@@ -7,6 +7,7 @@ insert into kb_category (version, id, name, slug, description, parent_id, sort_o
 insert into kb_category (version, id, name, slug, description, parent_id, sort_order) values (1, 11, 'Vaadin', 'vaadin', 'Articles about Vaadin framework', null, 2)
 insert into kb_category (version, id, name, slug, description, parent_id, sort_order) values (1, 12, 'Database', 'database', 'Articles about databases', null, 3)
 insert into kb_category (version, id, name, slug, description, parent_id, sort_order) values (1, 13, 'Developer', 'developer', 'Dev stuff', null, 4)
+insert into kb_category (version, id, name, slug, description, parent_id, sort_order) values (1, 14, 'Wiki', 'wiki', 'General wiki guidance and syntax references', null, 5)
 insert into kb_article (version, id, title, slug, content, created_by_id, created_at, updated_at, updated_by_id, status, category_id, sort_order) values (1, 100, 'Introduction to Java', 'introduction-to-java', '# Introduction to Java
 
 Java is a high-level, class-based, object-oriented programming language.
@@ -73,6 +74,68 @@ insert into kb_article (version, id, title, slug, content, created_by_id, create
 8. **Bruksinnsikt**. Mest leste artikler, null-resultat-sok, "nylig oppdatert".
 9. **Kvalitetsmaler**. Standard mal ved opprettelse (Problem, Losning, Eksempel, Referanser).
 10. **Import/~~eksport~~**. Markdown-import og backup/restore av knowledge base.', 1, '2026-01-01 10:30:00', '2026-01-01 10:30:00', 1, 'PUBLISHED', 13, 1)
+insert into kb_article (version, id, title, slug, content, created_by_id, created_at, updated_at, updated_by_id, status, category_id, sort_order) values (1, 107, 'Markdown syntax', 'markdown-syntax', '# Markdown syntax
+
+Use these raw markdown examples while writing articles.
+
+## Headings
+````text
+# Heading 1
+## Heading 2
+### Heading 3
+````
+
+## Emphasis
+````text
+**bold**
+*italic*
+~~strikethrough~~
+````
+
+## Lists
+````text
+- Bullet item
+- Another item
+1. Numbered item
+2. Next item
+````
+
+## Links and images
+````text
+[Knowledge Base](https://example.com)
+![Alt text](https://via.placeholder.com/160x80)
+````
+
+## Blockquote
+````text
+> Quote text
+````
+
+## Inline and block code
+````text
+Inline: `code`
+
+```java
+public class Example {
+    public static void main(String[] args) {
+        System.out.println("Hello Markdown");
+    }
+}
+```
+````
+
+## Table
+````text
+| Column | Value |
+| --- | --- |
+| A | 1 |
+| B | 2 |
+````
+
+## Horizontal rule
+````text
+***
+````', 1, '2026-01-01 10:35:00', '2026-01-01 10:35:00', 1, 'PUBLISHED', 14, 1)
 
 
 
