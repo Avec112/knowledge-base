@@ -56,7 +56,10 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final TextArea contentArea = new TextArea("Content (Markdown)");
     private final Markdown markdownPreview = new Markdown("");
     private final H2 titleDisplay = new H2();
+    private final ComboBox<WikiType> menuSearch = new ComboBox<>();
     private final Map<String, WikiType> nodeBySlug = new HashMap<>();
+    private final Map<WikiType, WikiType> parentByNode = new HashMap<>();
+    private final List<WikiType> quickJumpItems = new ArrayList<>();
     private WikiType welcomeNode;
 
     private final Button createButton = new Button("Create");
@@ -173,12 +176,13 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
     private void refreshArticleList() {
         nodeBySlug.clear();
+        parentByNode.clear();
+        quickJumpItems.clear();
         TreeData<WikiType> treeData = new TreeData<>();
-        List<WikiType> rootNodes = new ArrayList<>();
 
         welcomeNode = WikiType.welcome("Velkommen", WELCOME_SLUG);
-        rootNodes.add(welcomeNode);
         treeData.addItem(null, welcomeNode);
+        parentByNode.put(welcomeNode, null);
         nodeBySlug.put(WELCOME_SLUG, welcomeNode);
 
         try {
@@ -186,8 +190,9 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             List<Category> rootCategories = categoryService.findRootCategories();
             for (Category category : rootCategories) {
                 WikiType categoryNode = WikiType.category(category);
-                rootNodes.add(categoryNode);
                 treeData.addItem(null, categoryNode);
+                parentByNode.put(categoryNode, null);
+                quickJumpItems.add(categoryNode);
                 addCategoryChildren(treeData, categoryNode, category);
             }
 
@@ -195,16 +200,20 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             List<Article> uncategorized = articleService.findUncategorized();
             if (!uncategorized.isEmpty()) {
                 WikiType uncategorizedNode = WikiType.section("Ukategorisert");
-                rootNodes.add(uncategorizedNode);
                 treeData.addItem(null, uncategorizedNode);
+                parentByNode.put(uncategorizedNode, null);
                 for (Article article : uncategorized) {
                     WikiType articleNode = WikiType.article(article);
                     treeData.addItem(uncategorizedNode, articleNode);
+                    parentByNode.put(articleNode, uncategorizedNode);
                     nodeBySlug.put(article.getSlug(), articleNode);
+                    quickJumpItems.add(articleNode);
                 }
             }
 
             articleTree.setTreeData(treeData);
+            menuSearch.setItems(quickJumpItems);
+            menuSearch.clear();
         } catch (Exception e) {
             System.err.println("Error refreshing article list: " + e.getMessage());
             e.printStackTrace();
@@ -331,6 +340,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private void showArticle(Article article) {
         currentArticle = article;
         editMode = false;
+        highlightSelectedArticle(article);
 
         // Navigate to article URL with slug
         if (article != null && article.getSlug() != null) {
@@ -475,6 +485,27 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             .setFlexGrow(1);
         menuColumn.setSortable(false);
         menuColumn.setResizable(false);
+        menuSearch.setPrefixComponent(VaadinIcon.SEARCH.create());
+        menuSearch.setClearButtonVisible(true);
+        menuSearch.setWidthFull();
+        menuSearch.setItemLabelGenerator(WikiType::label);
+        menuSearch.setAllowCustomValue(true);
+        menuSearch.addValueChangeListener(event -> {
+            if (event.getValue() != null) {
+                handleQuickJump(event.getValue());
+            }
+        });
+        menuSearch.addCustomValueSetListener(event -> {
+            String query = event.getDetail() == null ? "" : event.getDetail().trim().toLowerCase();
+            if (query.isEmpty()) {
+                return;
+            }
+            quickJumpItems.stream()
+                .filter(item -> item.label() != null && item.label().toLowerCase().contains(query))
+                .findFirst()
+                .ifPresent(this::handleQuickJump);
+        });
+        menuColumn.setHeader(menuSearch);
         menuColumn.setRenderer(new ComponentRenderer<>(node -> {
                 HorizontalLayout itemLayout = new HorizontalLayout();
                 itemLayout.setSpacing(true);
@@ -529,6 +560,8 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
                         return;
                     }
                     showArticle(node.article());
+                } else if (node.type() == WikiNodeType.CATEGORY || node.type() == WikiNodeType.SECTION) {
+                    articleTree.expand(node);
                 }
             });
         });
@@ -552,13 +585,37 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         for (Article article : articles) {
             WikiType articleNode = WikiType.article(article);
             treeData.addItem(parentNode, articleNode);
+            parentByNode.put(articleNode, parentNode);
             nodeBySlug.put(article.getSlug(), articleNode);
+            quickJumpItems.add(articleNode);
         }
 
         for (Category child : category.getChildren()) {
             WikiType childCategoryNode = WikiType.category(child);
             treeData.addItem(parentNode, childCategoryNode);
+            parentByNode.put(childCategoryNode, parentNode);
+            quickJumpItems.add(childCategoryNode);
             addCategoryChildren(treeData, childCategoryNode, child);
+        }
+    }
+
+    private void handleQuickJump(WikiType item) {
+        expandAncestors(item);
+        if (item.type() == WikiNodeType.ARTICLE && item.article() != null) {
+            articleTree.select(item);
+            showArticle(item.article());
+        } else if (item.type() == WikiNodeType.CATEGORY || item.type() == WikiNodeType.SECTION) {
+            articleTree.expand(item);
+            articleTree.select(item);
+        }
+        menuSearch.clear();
+    }
+
+    private void expandAncestors(WikiType item) {
+        WikiType parent = parentByNode.get(item);
+        while (parent != null) {
+            articleTree.expand(parent);
+            parent = parentByNode.get(parent);
         }
     }
 
