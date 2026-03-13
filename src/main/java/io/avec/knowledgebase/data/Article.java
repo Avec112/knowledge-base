@@ -34,8 +34,9 @@ public class Article extends AbstractEntity {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private boolean published = false;
+    private ArticleStatus status = ArticleStatus.DRAFT;
 
     @ManyToOne
     @JoinColumn(name = "category_id")
@@ -48,6 +49,9 @@ public class Article extends AbstractEntity {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (status == null) {
+            status = ArticleStatus.DRAFT;
+        }
     }
 
     @PreUpdate
@@ -103,12 +107,20 @@ public class Article extends AbstractEntity {
         this.updatedAt = updatedAt;
     }
 
+    public ArticleStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ArticleStatus status) {
+        this.status = status;
+    }
+
     public boolean isPublished() {
-        return published;
+        return status == ArticleStatus.PUBLISHED;
     }
 
     public void setPublished(boolean published) {
-        this.published = published;
+        this.status = published ? ArticleStatus.PUBLISHED : ArticleStatus.DRAFT;
     }
 
     public Category getCategory() {

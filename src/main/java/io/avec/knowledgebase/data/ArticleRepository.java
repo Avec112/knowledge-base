@@ -11,11 +11,11 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     List<Article> findAllByOrderByUpdatedAtDesc();
 
-    List<Article> findByPublishedTrueOrderByUpdatedAtDesc();
+    List<Article> findByStatusOrderByUpdatedAtDesc(ArticleStatus status);
 
     List<Article> findByCategoryOrderBySortOrder(Category category);
 
-    List<Article> findByCategoryAndPublishedTrueOrderBySortOrder(Category category);
+    List<Article> findByCategoryAndStatusOrderBySortOrder(Category category, ArticleStatus status);
 
     List<Article> findByCategoryIsNullOrderBySortOrder();
 

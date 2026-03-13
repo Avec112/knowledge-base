@@ -2,6 +2,7 @@ package io.avec.knowledgebase.service;
 
 import io.avec.knowledgebase.data.Article;
 import io.avec.knowledgebase.data.ArticleRepository;
+import io.avec.knowledgebase.data.ArticleStatus;
 import io.avec.knowledgebase.data.Category;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +26,7 @@ public class ArticleService {
     }
 
     public List<Article> findPublished() {
-        return articleRepository.findByPublishedTrueOrderByUpdatedAtDesc();
+        return articleRepository.findByStatusOrderByUpdatedAtDesc(ArticleStatus.PUBLISHED);
     }
 
     public List<Article> findByCategory(Category category) {
@@ -33,7 +34,7 @@ public class ArticleService {
     }
 
     public List<Article> findByCategoryAndPublished(Category category) {
-        return articleRepository.findByCategoryAndPublishedTrueOrderBySortOrder(category);
+        return articleRepository.findByCategoryAndStatusOrderBySortOrder(category, ArticleStatus.PUBLISHED);
     }
 
     public List<Article> findUncategorized() {
@@ -50,6 +51,9 @@ public class ArticleService {
 
     @Transactional
     public Article save(Article article) {
+        if (article.getStatus() == null) {
+            article.setStatus(ArticleStatus.DRAFT);
+        }
         // Generate slug if not set or if title changed
         if (article.getSlug() == null || article.getSlug().isEmpty()) {
             article.setSlug(generateUniqueSlug(article.getTitle(), null));

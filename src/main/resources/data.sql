@@ -6,15 +6,15 @@ insert into user_roles (user_id, roles) values ('2', 'ADMIN')
 insert into kb_category (version, id, name, slug, description, parent_id, sort_order) values (1, 10, 'Java', 'java', 'Articles about Java programming language', null, 1)
 insert into kb_category (version, id, name, slug, description, parent_id, sort_order) values (1, 11, 'Vaadin', 'vaadin', 'Articles about Vaadin framework', null, 2)
 insert into kb_category (version, id, name, slug, description, parent_id, sort_order) values (1, 12, 'Database', 'database', 'Articles about databases', null, 3)
-insert into kb_article (version, id, title, slug, content, created_by_id, created_at, updated_at, published, category_id, sort_order) values (1, 100, 'Introduction to Java', 'introduction-to-java', '# Introduction to Java
+insert into kb_article (version, id, title, slug, content, created_by_id, created_at, updated_at, status, category_id, sort_order) values (1, 100, 'Introduction to Java', 'introduction-to-java', '# Introduction to Java
 
 Java is a high-level, class-based, object-oriented programming language.
 
 ## Key Features
 - Platform independent
 - Object-oriented
-- Robust and secure', 1, '2026-01-01 10:00:00', '2026-01-01 10:00:00', true, 10, 1)
-insert into kb_article (version, id, title, slug, content, created_by_id, created_at, updated_at, published, category_id, sort_order) values (1, 101, 'Java Collections Framework', 'java-collections-framework', '# Java Collections Framework
+- Robust and secure', 1, '2026-01-01 10:00:00', '2026-01-01 10:00:00', 'PUBLISHED', 10, 1)
+insert into kb_article (version, id, title, slug, content, created_by_id, created_at, updated_at, status, category_id, sort_order) values (1, 101, 'Java Collections Framework', 'java-collections-framework', '# Java Collections Framework
 
 The Collections Framework provides a set of interfaces and classes for storing and manipulating groups of data.
 
@@ -22,16 +22,16 @@ The Collections Framework provides a set of interfaces and classes for storing a
 - List
 - Set
 - Map
-- Queue', 1, '2026-01-01 10:05:00', '2026-01-01 10:05:00', true, 10, 2)
-insert into kb_article (version, id, title, slug, content, created_by_id, created_at, updated_at, published, category_id, sort_order) values (1, 102, 'Getting Started with Vaadin', 'getting-started-with-vaadin', '# Getting Started with Vaadin
+- Queue', 1, '2026-01-01 10:05:00', '2026-01-01 10:05:00', 'PUBLISHED', 10, 2)
+insert into kb_article (version, id, title, slug, content, created_by_id, created_at, updated_at, status, category_id, sort_order) values (1, 102, 'Getting Started with Vaadin', 'getting-started-with-vaadin', '# Getting Started with Vaadin
 
 Vaadin is a platform for building modern web applications in Java.
 
 ## Benefits
 - Full-stack framework
 - Type-safe Java
-- Component-based architecture', 1, '2026-01-01 10:10:00', '2026-01-01 10:10:00', true, 11, 1)
-insert into kb_article (version, id, title, slug, content, created_by_id, created_at, updated_at, published, category_id, sort_order) values (1, 103, 'Vaadin Layouts and Components', 'vaadin-layouts-and-components', '# Vaadin Layouts and Components
+- Component-based architecture', 1, '2026-01-01 10:10:00', '2026-01-01 10:10:00', 'PUBLISHED', 11, 1)
+insert into kb_article (version, id, title, slug, content, created_by_id, created_at, updated_at, status, category_id, sort_order) values (1, 103, 'Vaadin Layouts and Components', 'vaadin-layouts-and-components', '# Vaadin Layouts and Components
 
 Vaadin provides a rich set of UI components and layout managers.
 
@@ -43,8 +43,8 @@ Vaadin provides a rich set of UI components and layout managers.
 ## Popular Components
 - TextField
 - Button
-- Grid', 1, '2026-01-01 10:15:00', '2026-01-01 10:15:00', true, 11, 2)
-insert into kb_article (version, id, title, slug, content, created_by_id, created_at, updated_at, published, category_id, sort_order) values (1, 104, 'Introduction to SQL', 'introduction-to-sql', '# Introduction to SQL
+- Grid', 1, '2026-01-01 10:15:00', '2026-01-01 10:15:00', 'PUBLISHED', 11, 2)
+insert into kb_article (version, id, title, slug, content, created_by_id, created_at, updated_at, status, category_id, sort_order) values (1, 104, 'Introduction to SQL', 'introduction-to-sql', '# Introduction to SQL
 
 SQL (Structured Query Language) is used to communicate with databases.
 
@@ -52,8 +52,8 @@ SQL (Structured Query Language) is used to communicate with databases.
 ```sql
 SELECT * FROM users;
 INSERT INTO users (name, email) VALUES (''John'', ''john@example.com'');
-```', 1, '2026-01-01 10:20:00', '2026-01-01 10:20:00', true, 12, 1)
-insert into kb_article (version, id, title, slug, content, created_by_id, created_at, updated_at, published, category_id, sort_order) values (1, 105, 'JPA and Hibernate Basics', 'jpa-and-hibernate-basics', '# JPA and Hibernate Basics
+```', 1, '2026-01-01 10:20:00', '2026-01-01 10:20:00', 'PUBLISHED', 12, 1)
+insert into kb_article (version, id, title, slug, content, created_by_id, created_at, updated_at, status, category_id, sort_order) values (1, 105, 'JPA and Hibernate Basics', 'jpa-and-hibernate-basics', '# JPA and Hibernate Basics
 
 JPA (Java Persistence API) is a specification for object-relational mapping in Java.
 
@@ -61,6 +61,7 @@ JPA (Java Persistence API) is a specification for object-relational mapping in J
 - `@Entity`
 - `@Id`
 - `@ManyToOne`
-- `@OneToMany`', 1, '2026-01-01 10:25:00', '2026-01-01 10:25:00', true, 12, 2)
+- `@OneToMany`', 1, '2026-01-01 10:25:00', '2026-01-01 10:25:00', 'PUBLISHED', 12, 2)
+
 
 

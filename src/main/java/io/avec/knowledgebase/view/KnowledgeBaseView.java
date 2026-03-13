@@ -23,6 +23,7 @@ import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.router.*;
 import io.avec.data.Role;
 import io.avec.knowledgebase.data.Article;
+import io.avec.knowledgebase.data.ArticleStatus;
 import io.avec.knowledgebase.data.Category;
 import io.avec.knowledgebase.service.ArticleService;
 import io.avec.knowledgebase.service.CategoryService;
@@ -41,6 +42,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.function.Consumer;
 
 import java.util.Optional;
 
@@ -57,6 +59,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final TreeGrid<WikiType> articleTree = new TreeGrid<>();
     private final TextField titleField = new TextField("Title");
     private final ComboBox<Category> categoryField = new ComboBox<>("Category");
+    private final ComboBox<ArticleStatus> statusField = new ComboBox<>("Status");
     private final TextArea contentArea = new TextArea("Content (Markdown)");
     private final Markdown markdownPreview = new Markdown("");
     private final H2 titleDisplay = new H2();
@@ -85,6 +88,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private boolean previewMode = false;
     private boolean isAdmin = false;
     private static final String WELCOME_SLUG = "welcome-to-knowledge";
+    private static final String CREATE_CATEGORY_SLUG = "__create_category__";
 
     public KnowledgeBaseView(ArticleService articleService, CategoryService categoryService, AuthenticatedUser authenticatedUser) {
         this.articleService = articleService;
@@ -321,7 +325,15 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     }
 
     private void refreshCategoryFieldItems() {
-        categoryField.setItems(categoryService.findRootCategories());
+        List<Category> options = new ArrayList<>();
+        if (isAdmin) {
+            Category createOption = new Category();
+            createOption.setSlug(CREATE_CATEGORY_SLUG);
+            createOption.setName("Create");
+            options.add(createOption);
+        }
+        options.addAll(categoryService.findRootCategories());
+        categoryField.setItems(options);
     }
 
     private VerticalLayout createRightPanel() {
@@ -343,11 +355,46 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
         // Category field (edit mode)
         categoryField.setWidthFull();
-        categoryField.setItems(categoryService.findRootCategories());
-        categoryField.setItemLabelGenerator(Category::getName);
+        refreshCategoryFieldItems();
+        categoryField.setItemLabelGenerator(this::categoryOptionLabel);
+        categoryField.setRenderer(new ComponentRenderer<>(category -> {
+            if (isCreateCategoryOption(category)) {
+                Span createBadge = new Span("Create");
+                createBadge.getStyle()
+                    .set("font-size", "var(--lumo-font-size-xs)")
+                    .set("padding", "2px 8px")
+                    .set("border-radius", "var(--lumo-border-radius-m)")
+                    .set("background", "var(--lumo-contrast-10pct)")
+                    .set("color", "var(--lumo-primary-text-color)");
+                return createBadge;
+            }
+            return new Span(categoryOptionLabel(category));
+        }));
+        categoryField.addValueChangeListener(event -> {
+            Category selected = event.getValue();
+            if (!isCreateCategoryOption(selected)) {
+                return;
+            }
+            Category previous = currentArticle != null ? currentArticle.getCategory() : null;
+            categoryField.clear();
+            openCreateCategoryDialog(createdCategory -> {
+                refreshCategoryFieldItems();
+                if (createdCategory != null) {
+                    categoryField.setValue(createdCategory);
+                } else if (previous != null) {
+                    categoryField.setValue(previous);
+                }
+            });
+        });
         categoryField.setPlaceholder("Select a category (optional)");
         categoryField.setClearButtonVisible(true);
         categoryField.setVisible(false);
+
+        // Status field (edit mode)
+        statusField.setWidthFull();
+        statusField.setItems(ArticleStatus.DRAFT, ArticleStatus.PUBLISHED);
+        statusField.setItemLabelGenerator(ArticleStatus::name);
+        statusField.setVisible(false);
 
         // Content area (edit mode) - monospace font for Markdown editing
         contentArea.setWidthFull();
@@ -362,7 +409,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         markdownPreview.setWidthFull();
         markdownPreview.addClassName("wiki-content");
 
-        panel.add(titleDisplay, titleField, categoryField, contentArea, markdownPreview);
+        panel.add(titleDisplay, titleField, categoryField, statusField, contentArea, markdownPreview);
 //        panel.setFlexGrow(1, markdownPreview);
 
         return panel;
@@ -371,7 +418,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private void createNewArticle() {
         currentArticle = new Article();
         authenticatedUser.get().ifPresent(user -> currentArticle.setCreatedBy(user));
-        currentArticle.setPublished(true);
+        currentArticle.setStatus(ArticleStatus.DRAFT);
         enableEditMode();
         titleField.clear();
         contentArea.clear();
@@ -422,6 +469,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
         currentArticle.setTitle(titleField.getValue());
         currentArticle.setCategory(categoryField.getValue());
+        currentArticle.setStatus(statusField.getValue() != null ? statusField.getValue() : ArticleStatus.DRAFT);
         currentArticle.setContent(contentArea.getValue());
 
         try {
@@ -449,11 +497,15 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     }
 
     private void openCreateCategoryDialog() {
+        openCreateCategoryDialog(null);
+    }
+
+    private void openCreateCategoryDialog(Consumer<Category> onCreated) {
         if (!isAdmin) {
             Notification.show("Only administrators can create categories");
             return;
         }
-        openCategoryDialog(new Category(), "Create Category");
+        openCategoryDialog(new Category(), "Create Category", onCreated);
     }
 
     private void openEditCategoryDialog() {
@@ -461,10 +513,10 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             Notification.show("Select a category first");
             return;
         }
-        openCategoryDialog(currentCategory, "Edit Category");
+        openCategoryDialog(currentCategory, "Edit Category", null);
     }
 
-    private void openCategoryDialog(Category category, String title) {
+    private void openCategoryDialog(Category category, String title, Consumer<Category> onCreated) {
         Dialog dialog = new Dialog();
         dialog.setHeaderTitle(title);
 
@@ -505,6 +557,9 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
                 selectCategory(saved);
                 updateUI();
                 dialog.close();
+                if (onCreated != null) {
+                    onCreated.accept(saved);
+                }
                 Notification.show("Category saved");
             } catch (Exception ex) {
                 Notification.show("Error saving category: " + ex.getMessage());
@@ -572,6 +627,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         titleDisplay.setVisible(!editMode);
         titleField.setVisible(editMode);
         categoryField.setVisible(editMode);
+        statusField.setVisible(editMode);
         contentArea.setVisible(editMode);
         markdownPreview.setVisible(!editMode);
 
@@ -580,6 +636,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             if (editMode) {
                 titleField.setValue(currentArticle.getTitle() != null ? currentArticle.getTitle() : "");
                 categoryField.setValue(currentArticle.getCategory());
+                statusField.setValue(currentArticle.getStatus() != null ? currentArticle.getStatus() : ArticleStatus.DRAFT);
                 contentArea.setValue(currentArticle.getContent() != null ? currentArticle.getContent() : "");
             } else {
                 titleDisplay.setText(currentArticle.getTitle() != null ? currentArticle.getTitle() : "");
@@ -615,6 +672,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         // Toggle visibility
         titleField.setVisible(!previewMode);
         categoryField.setVisible(!previewMode);
+        statusField.setVisible(!previewMode);
         contentArea.setVisible(!previewMode);
         titleDisplay.setVisible(previewMode);
         markdownPreview.setVisible(previewMode);
@@ -729,7 +787,6 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
                     showArticle(node.article());
                 } else if (node.type() == WikiNodeType.CATEGORY || node.type() == WikiNodeType.SECTION) {
                     currentCategory = node.category();
-                    articleTree.expand(node);
                     updateUI();
                 }
             });
@@ -909,6 +966,14 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             toggleCategoriesButton.setText("Expand all");
             toggleCategoriesButton.setIcon(VaadinIcon.CARET_RIGHT.create());
         }
+    }
+
+    private boolean isCreateCategoryOption(Category category) {
+        return category != null && CREATE_CATEGORY_SLUG.equals(category.getSlug());
+    }
+
+    private String categoryOptionLabel(Category category) {
+        return isCreateCategoryOption(category) ? "Create" : (category != null ? category.getName() : "");
     }
 
     private enum WikiNodeType {
