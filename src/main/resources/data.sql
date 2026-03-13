@@ -62,6 +62,16 @@ JPA (Java Persistence API) is a specification for object-relational mapping in J
 - `@Id`
 - `@ManyToOne`
 - `@OneToMany`', 1, '2026-01-01 10:25:00', '2026-01-01 10:25:00', 'PUBLISHED', 12, 2)
+insert into kb_article (version, id, title, slug, content, created_by_id, created_at, updated_at, status, category_id, sort_order) values (1, 106, 'TODO', 'todo', '1. **Revisjonshistorikk per artikkel**. Med "restore version" og diff-visning.
+2. ~~**Utkast og publisering**. Draft -> Published, med enkel godkjenning.~~
+3. **Fulle sok**. Sok i bade tittel og innhold (ikke bare label), med highlight i treff.
+4. **Relaterte artikler**. Manuelt eller automatisk (basert pa kategori/ord) nederst i artikkelvisning.
+5. **Enkle metadata**. Tags, "sist oppdatert av", "sist oppdatert dato", lesetid.
+6. **Broken-link og orphan-check**. Finn artikler uten kategori, dode lenker, og tomt innhold.
+7. **Rettigheter per kategori**. Enkel tilgangsstyring (kun admin/kun intern/alle).
+8. **Bruksinnsikt**. Mest leste artikler, null-resultat-sok, "nylig oppdatert".
+9. **Kvalitetsmaler**. Standard mal ved opprettelse (Problem, Losning, Eksempel, Referanser).
+10. **Import/eksport**. Markdown-import og backup/restore av knowledge base.', 1, '2026-01-01 10:30:00', '2026-01-01 10:30:00', 'PUBLISHED', null, 1)
 
 
 
