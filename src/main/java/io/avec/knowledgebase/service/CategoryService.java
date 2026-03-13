@@ -24,7 +24,7 @@ public class CategoryService {
     }
 
     public List<Category> findRootCategories() {
-        return categoryRepository.findByParentIsNullOrderBySortOrder();
+        return categoryRepository.findByParentIsNullOrderBySortOrderAscIdAsc();
     }
 
     public List<Category> findRootCategoriesWithChildren() {
@@ -32,7 +32,7 @@ public class CategoryService {
     }
 
     public List<Category> findByParent(Category parent) {
-        return categoryRepository.findByParentOrderBySortOrder(parent);
+        return categoryRepository.findByParentOrderBySortOrderAscIdAsc(parent);
     }
 
     public Optional<Category> findById(Long id) {
@@ -74,6 +74,15 @@ public class CategoryService {
     @Transactional
     public void delete(Category category) {
         categoryRepository.delete(category);
+    }
+
+    @Transactional
+    public void reorderRootCategories(List<Category> orderedRootCategories) {
+        for (int i = 0; i < orderedRootCategories.size(); i++) {
+            Category category = orderedRootCategories.get(i);
+            category.setSortOrder(i + 1);
+        }
+        categoryRepository.saveAll(orderedRootCategories);
     }
 
     public String generateUniqueSlug(String name, Long excludeId) {

@@ -10,16 +10,16 @@ import java.util.Optional;
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Long> {
 
-    List<Category> findByParentIsNullOrderBySortOrder();
+    List<Category> findByParentIsNullOrderBySortOrderAscIdAsc();
 
-    List<Category> findByParentOrderBySortOrder(Category parent);
+    List<Category> findByParentOrderBySortOrderAscIdAsc(Category parent);
 
     Optional<Category> findBySlug(String slug);
     Optional<Category> findByNameIgnoreCase(String name);
 
     boolean existsBySlug(String slug);
 
-    @Query("SELECT c FROM Category c LEFT JOIN FETCH c.children WHERE c.parent IS NULL ORDER BY c.sortOrder")
+    @Query("SELECT c FROM Category c LEFT JOIN FETCH c.children WHERE c.parent IS NULL ORDER BY c.sortOrder, c.id")
     List<Category> findRootCategoriesWithChildren();
 
     @Query("SELECT c FROM Category c LEFT JOIN FETCH c.articles WHERE c.id = :id")

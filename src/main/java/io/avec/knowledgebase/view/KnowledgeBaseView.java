@@ -15,6 +15,8 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.treegrid.TreeGrid;
+import com.vaadin.flow.component.grid.dnd.GridDropLocation;
+import com.vaadin.flow.component.grid.dnd.GridDropMode;
 import com.vaadin.flow.data.provider.hierarchy.TreeData;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.router.*;
@@ -62,6 +64,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final Map<WikiType, WikiType> parentByNode = new HashMap<>();
     private final List<WikiType> quickJumpItems = new ArrayList<>();
     private WikiType welcomeNode;
+    private WikiType draggedNode;
 
     private final Button createButton = new Button("Create");
     private final Button createCategoryButton = new Button("Create");
@@ -684,8 +687,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
                 return itemLayout;
             }));
 
-        articleTree.setPartNameGenerator(node -> node.type() == WikiNodeType.CATEGORY ? "category" : null);
+        articleTree.setPartNameGenerator(node ->
+            node != null && node.type() == WikiNodeType.CATEGORY ? "category" : null
+        );
         articleTree.setAllRowsVisible(true);
+        configureCategoryDragAndDrop();
         articleTree.addExpandListener(event -> articleTree.getDataProvider().refreshAll());
         articleTree.addCollapseListener(event -> articleTree.getDataProvider().refreshAll());
         articleTree.addSelectionListener(event -> {
@@ -712,6 +718,9 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         });
         articleTree.addItemClickListener(event -> {
             WikiType node = event.getItem();
+            if (node == null) {
+                return;
+            }
             if (node.type() == WikiNodeType.CATEGORY || node.type() == WikiNodeType.SECTION) {
                 if (articleTree.isExpanded(node)) {
                     articleTree.collapse(node);
@@ -720,6 +729,93 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
                 }
             }
         });
+    }
+
+    private void configureCategoryDragAndDrop() {
+        articleTree.setRowsDraggable(isAdmin);
+        articleTree.setDropMode(isAdmin ? GridDropMode.BETWEEN : null);
+
+        if (!isAdmin) {
+            return;
+        }
+
+        articleTree.addDragStartListener(event -> {
+            draggedNode = event.getDraggedItems().stream().findFirst().orElse(null);
+            if (draggedNode == null || draggedNode.type() != WikiNodeType.CATEGORY || draggedNode.category() == null) {
+                draggedNode = null;
+            }
+        });
+
+        articleTree.addDragEndListener(event -> draggedNode = null);
+
+        articleTree.addDropListener(event -> {
+            if (draggedNode == null || draggedNode.type() != WikiNodeType.CATEGORY || draggedNode.category() == null) {
+                return;
+            }
+
+            WikiType target = event.getDropTargetItem().orElse(null);
+            if (target == null || target.type() != WikiNodeType.CATEGORY || target.category() == null) {
+                return;
+            }
+
+            if (draggedNode.category().getId() != null && draggedNode.category().getId().equals(target.category().getId())) {
+                return;
+            }
+
+            GridDropLocation location = event.getDropLocation();
+            if (location != GridDropLocation.ABOVE && location != GridDropLocation.BELOW) {
+                return;
+            }
+
+            reorderRootCategories(draggedNode.category(), target.category(), location);
+            draggedNode = null;
+        });
+    }
+
+    private void reorderRootCategories(Category draggedCategory, Category targetCategory, GridDropLocation location) {
+        List<Category> rootCategories = new ArrayList<>(categoryService.findRootCategories());
+        int fromIndex = indexOfCategory(rootCategories, draggedCategory);
+        int targetIndex = indexOfCategory(rootCategories, targetCategory);
+        if (fromIndex < 0 || targetIndex < 0) {
+            return;
+        }
+
+        Category moved = rootCategories.remove(fromIndex);
+        if (fromIndex < targetIndex) {
+            targetIndex--;
+        }
+        if (location == GridDropLocation.BELOW) {
+            targetIndex++;
+        }
+
+        if (targetIndex < 0) {
+            targetIndex = 0;
+        }
+        if (targetIndex > rootCategories.size()) {
+            targetIndex = rootCategories.size();
+        }
+
+        rootCategories.add(targetIndex, moved);
+
+        categoryService.reorderRootCategories(rootCategories);
+
+        currentCategory = moved;
+        refreshArticleList();
+        selectCategory(moved);
+        Notification.show("Category order updated");
+    }
+
+    private int indexOfCategory(List<Category> categories, Category target) {
+        if (target == null || target.getId() == null) {
+            return -1;
+        }
+        for (int i = 0; i < categories.size(); i++) {
+            Category category = categories.get(i);
+            if (category.getId() != null && category.getId().equals(target.getId())) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private void addCategoryChildren(TreeData<WikiType> treeData, WikiType parentNode, Category category) {
