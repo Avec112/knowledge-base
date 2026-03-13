@@ -3,6 +3,7 @@ package io.avec.knowledgebase.view;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Span;
@@ -63,13 +64,17 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private WikiType welcomeNode;
 
     private final Button createButton = new Button("Create");
+    private final Button createCategoryButton = new Button("Create");
     private final Button editButton = new Button("Edit");
+    private final Button editCategoryButton = new Button("Edit");
     private final Button previewButton = new Button("Preview");
     private final Button saveButton = new Button("Save");
     private final Button cancelButton = new Button("Cancel");
     private final Button deleteButton = new Button("Delete");
+    private final Button deleteCategoryButton = new Button("Delete");
 
     private Article currentArticle;
+    private Category currentCategory;
     private boolean editMode = false;
     private boolean previewMode = false;
     private boolean isAdmin = false;
@@ -179,6 +184,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         parentByNode.clear();
         quickJumpItems.clear();
         TreeData<WikiType> treeData = new TreeData<>();
+        refreshCategoryFieldItems();
 
         welcomeNode = WikiType.welcome("Velkommen", WELCOME_SLUG);
         treeData.addItem(null, welcomeNode);
@@ -243,7 +249,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         // Button bar
         HorizontalLayout buttonBar = new HorizontalLayout();
         buttonBar.setWidthFull();
-        buttonBar.setJustifyContentMode(JustifyContentMode.END);
+        buttonBar.setJustifyContentMode(JustifyContentMode.BETWEEN);
         buttonBar.setPadding(true);
         buttonBar.setSpacing(true);
         buttonBar.addClassName("kb-button-bar");
@@ -251,35 +257,62 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             .set("padding", "2px var(--lumo-space-m)")
         ;
 
-        createButton.setIcon(VaadinIcon.PLUS.create());
+        createButton.setIcon(VaadinIcon.FILE_O.create());
         createButton.addClickListener(e -> createNewArticle());
         createButton.setVisible(false);
 
-        editButton.setIcon(VaadinIcon.EDIT.create());
+        createCategoryButton.setIcon(VaadinIcon.FOLDER.create());
+        createCategoryButton.addClickListener(e -> openCreateCategoryDialog());
+        createCategoryButton.setVisible(false);
+
+        editButton.setIcon(VaadinIcon.FILE_O.create());
         editButton.addClickListener(e -> enableEditMode());
         editButton.setVisible(false);
 
-        previewButton.setIcon(VaadinIcon.EYE.create());
+        editCategoryButton.setIcon(VaadinIcon.FOLDER.create());
+        editCategoryButton.addClickListener(e -> openEditCategoryDialog());
+        editCategoryButton.setVisible(false);
+
+        previewButton.setIcon(VaadinIcon.FILE_O.create());
         previewButton.addClickListener(e -> togglePreview());
         previewButton.setVisible(false);
 
-        saveButton.setIcon(VaadinIcon.CHECK.create());
+        saveButton.setIcon(VaadinIcon.FILE_O.create());
         saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         saveButton.addClickListener(e -> saveArticle());
         saveButton.setVisible(false);
 
-        cancelButton.setIcon(VaadinIcon.CLOSE.create());
+        cancelButton.setIcon(VaadinIcon.FILE_O.create());
         cancelButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
         cancelButton.addClickListener(e -> cancelEdit());
         cancelButton.setVisible(false);
 
-        deleteButton.setIcon(VaadinIcon.TRASH.create());
+        deleteButton.setIcon(VaadinIcon.FILE_O.create());
         deleteButton.addThemeVariants(ButtonVariant.LUMO_ERROR);
         deleteButton.addClickListener(e -> deleteArticle());
         deleteButton.setVisible(false);
 
-        buttonBar.add(createButton, editButton, previewButton, saveButton, cancelButton, deleteButton);
+        deleteCategoryButton.setIcon(VaadinIcon.FOLDER.create());
+        deleteCategoryButton.addThemeVariants(ButtonVariant.LUMO_ERROR);
+        deleteCategoryButton.addClickListener(e -> deleteCategory());
+        deleteCategoryButton.setVisible(false);
+
+        HorizontalLayout categoryButtons = new HorizontalLayout(createCategoryButton, editCategoryButton, deleteCategoryButton);
+        categoryButtons.setSpacing(true);
+        categoryButtons.setPadding(false);
+        categoryButtons.setMargin(false);
+
+        HorizontalLayout articleButtons = new HorizontalLayout(createButton, editButton, previewButton, saveButton, cancelButton, deleteButton);
+        articleButtons.setSpacing(true);
+        articleButtons.setPadding(false);
+        articleButtons.setMargin(false);
+
+        buttonBar.add(categoryButtons, articleButtons);
         return buttonBar;
+    }
+
+    private void refreshCategoryFieldItems() {
+        categoryField.setItems(categoryService.findRootCategories());
     }
 
     private VerticalLayout createRightPanel() {
@@ -301,7 +334,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
         // Category field (edit mode)
         categoryField.setWidthFull();
-        categoryField.setItems(categoryService.findAll());
+        categoryField.setItems(categoryService.findRootCategories());
         categoryField.setItemLabelGenerator(Category::getName);
         categoryField.setPlaceholder("Select a category (optional)");
         categoryField.setClearButtonVisible(true);
@@ -406,17 +439,125 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         Notification.show("Article deleted");
     }
 
+    private void openCreateCategoryDialog() {
+        if (!isAdmin) {
+            Notification.show("Only administrators can create categories");
+            return;
+        }
+        openCategoryDialog(new Category(), "Create Category");
+    }
+
+    private void openEditCategoryDialog() {
+        if (!isAdmin || currentCategory == null) {
+            Notification.show("Select a category first");
+            return;
+        }
+        openCategoryDialog(currentCategory, "Edit Category");
+    }
+
+    private void openCategoryDialog(Category category, String title) {
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle(title);
+
+        TextField nameField = new TextField("Name");
+        nameField.setWidthFull();
+        nameField.setRequiredIndicatorVisible(true);
+        nameField.setValue(category.getName() != null ? category.getName() : "");
+
+        TextArea descriptionField = new TextArea("Description");
+        descriptionField.setWidthFull();
+        descriptionField.setValue(category.getDescription() != null ? category.getDescription() : "");
+
+        VerticalLayout content = new VerticalLayout(nameField, descriptionField);
+        content.setPadding(false);
+        content.setSpacing(true);
+        dialog.add(content);
+
+        Button cancel = new Button("Cancel", e -> dialog.close());
+        Button save = new Button("Save", e -> {
+            String name = nameField.getValue() != null ? nameField.getValue().trim() : "";
+            if (name.isEmpty()) {
+                Notification.show("Category name is required");
+                return;
+            }
+
+            category.setName(name);
+            String description = descriptionField.getValue() != null ? descriptionField.getValue().trim() : "";
+            category.setDescription(description.isEmpty() ? null : description);
+            category.setParent(null);
+            if (category.getId() == null) {
+                category.setSortOrder(categoryService.findRootCategories().size() + 1);
+            }
+
+            try {
+                Category saved = categoryService.save(category);
+                currentCategory = saved;
+                refreshArticleList();
+                selectCategory(saved);
+                updateUI();
+                dialog.close();
+                Notification.show("Category saved");
+            } catch (Exception ex) {
+                Notification.show("Error saving category: " + ex.getMessage());
+            }
+        });
+        save.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+        dialog.getFooter().add(cancel, save);
+        dialog.open();
+    }
+
+    private void selectCategory(Category category) {
+        if (category == null) {
+            return;
+        }
+        articleTree.getTreeData().getRootItems().stream()
+            .filter(node -> node.type() == WikiNodeType.CATEGORY && node.category() != null && node.category().getId() != null
+                && node.category().getId().equals(category.getId()))
+            .findFirst()
+            .ifPresent(node -> {
+                articleTree.select(node);
+                articleTree.expand(node);
+            });
+    }
+
+    private void deleteCategory() {
+        if (!isAdmin || currentCategory == null || currentCategory.getId() == null) {
+            Notification.show("Select a category first");
+            return;
+        }
+
+        if (!articleService.findByCategory(currentCategory).isEmpty()) {
+            Notification.show("Category has articles and cannot be deleted");
+            return;
+        }
+
+        try {
+            categoryService.delete(currentCategory);
+            currentCategory = null;
+            refreshArticleList();
+            updateUI();
+            Notification.show("Category deleted");
+        } catch (Exception ex) {
+            Notification.show("Error deleting category: " + ex.getMessage());
+        }
+    }
+
     private void updateUI() {
         boolean hasArticle = currentArticle != null;
         boolean hasId = hasArticle && currentArticle.getId() != null;
+        boolean hasCategory = currentCategory != null && currentCategory.getId() != null;
 
         // Update button visibility
-        createButton.setVisible(isAdmin);
+        createButton.setVisible(isAdmin && !editMode);
+        createCategoryButton.setVisible(isAdmin && !editMode);
         editButton.setVisible(hasArticle && !editMode && isAdmin);
+        editCategoryButton.setVisible(hasCategory && !editMode && isAdmin);
         previewButton.setVisible(editMode);
         saveButton.setVisible(editMode);
         cancelButton.setVisible(editMode);
         deleteButton.setVisible(hasId && isAdmin);
+        deleteCategoryButton.setVisible(hasCategory && !editMode && isAdmin);
 
         // Update content visibility
         titleDisplay.setVisible(!editMode);
@@ -550,18 +691,22 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         articleTree.addSelectionListener(event -> {
             event.getFirstSelectedItem().ifPresent(node -> {
                 if (node.type() == WikiNodeType.WELCOME) {
+                    currentCategory = null;
                     if (currentArticle == null) {
                         return;
                     }
                     getUI().ifPresent(ui -> ui.navigate("knowledge/" + WELCOME_SLUG));
                 } else if (node.type() == WikiNodeType.ARTICLE && node.article() != null) {
+                    currentCategory = null;
                     if (currentArticle != null && currentArticle.getId() != null
                         && currentArticle.getId().equals(node.article().getId())) {
                         return;
                     }
                     showArticle(node.article());
                 } else if (node.type() == WikiNodeType.CATEGORY || node.type() == WikiNodeType.SECTION) {
+                    currentCategory = node.category();
                     articleTree.expand(node);
+                    updateUI();
                 }
             });
         });

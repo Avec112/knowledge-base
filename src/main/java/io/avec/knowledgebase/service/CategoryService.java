@@ -49,6 +49,21 @@ public class CategoryService {
 
     @Transactional
     public Category save(Category category) {
+        String normalizedName = category.getName() == null ? "" : category.getName().trim();
+        if (normalizedName.isEmpty()) {
+            throw new IllegalArgumentException("Category name is required");
+        }
+
+        Optional<Category> existingByName = categoryRepository.findByNameIgnoreCase(normalizedName);
+        if (existingByName.isPresent()) {
+            boolean sameEntity = category.getId() != null && category.getId().equals(existingByName.get().getId());
+            if (!sameEntity) {
+                throw new IllegalArgumentException("Category name already exists");
+            }
+        }
+
+        category.setName(normalizedName);
+
         // Generate slug if not set
         if (category.getSlug() == null || category.getSlug().isEmpty()) {
             category.setSlug(generateUniqueSlug(category.getName(), null));
