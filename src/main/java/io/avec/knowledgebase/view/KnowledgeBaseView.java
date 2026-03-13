@@ -37,6 +37,7 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -63,6 +64,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final TextArea contentArea = new TextArea("Content (Markdown)");
     private final Markdown markdownPreview = new Markdown("");
     private final H2 titleDisplay = new H2();
+    private final Div metadataDisplay = new Div();
     private final ComboBox<WikiType> menuSearch = new ComboBox<>();
     private final Button toggleCategoriesButton = new Button();
     private final Map<String, WikiType> nodeBySlug = new HashMap<>();
@@ -89,6 +91,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private boolean isAdmin = false;
     private static final String WELCOME_SLUG = "welcome-to-knowledge";
     private static final String CREATE_CATEGORY_SLUG = "__create_category__";
+    private static final DateTimeFormatter METADATA_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     public KnowledgeBaseView(ArticleService articleService, CategoryService categoryService, AuthenticatedUser authenticatedUser) {
         this.articleService = articleService;
@@ -143,6 +146,8 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private void showDefaultWelcome() {
         currentArticle = null;
         titleDisplay.setText("Welcome to KnowledgeBase");
+        metadataDisplay.getElement().setProperty("innerHTML", "");
+        metadataDisplay.setVisible(false);
 
         try {
             InputStream is = getClass().getClassLoader().getResourceAsStream("knowledge/welcome-to-knowledge.md");
@@ -217,7 +222,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             // Add uncategorized articles at the end
             List<Article> uncategorized = articleService.findUncategorized();
             if (!uncategorized.isEmpty()) {
-                WikiType uncategorizedNode = WikiType.section("Ukategorisert");
+                WikiType uncategorizedNode = WikiType.section("Uncategorized");
                 treeData.addItem(null, uncategorizedNode);
                 parentByNode.put(uncategorizedNode, null);
                 for (Article article : uncategorized) {
@@ -410,6 +415,8 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         markdownPreview.addClassName("wiki-content");
 
         panel.add(titleDisplay, titleField, categoryField, statusField, contentArea, markdownPreview);
+        metadataDisplay.addClassName("article-metadata");
+        panel.addComponentAtIndex(1, metadataDisplay);
 //        panel.setFlexGrow(1, markdownPreview);
 
         return panel;
@@ -417,7 +424,10 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
     private void createNewArticle() {
         currentArticle = new Article();
-        authenticatedUser.get().ifPresent(user -> currentArticle.setCreatedBy(user));
+        authenticatedUser.get().ifPresent(user -> {
+            currentArticle.setCreatedBy(user);
+            currentArticle.setUpdatedBy(user);
+        });
         currentArticle.setStatus(ArticleStatus.DRAFT);
         enableEditMode();
         titleField.clear();
@@ -471,6 +481,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         currentArticle.setCategory(categoryField.getValue());
         currentArticle.setStatus(statusField.getValue() != null ? statusField.getValue() : ArticleStatus.DRAFT);
         currentArticle.setContent(contentArea.getValue());
+        authenticatedUser.get().ifPresent(currentArticle::setUpdatedBy);
 
         try {
             currentArticle = articleService.save(currentArticle);
@@ -630,6 +641,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         statusField.setVisible(editMode);
         contentArea.setVisible(editMode);
         markdownPreview.setVisible(!editMode);
+        metadataDisplay.setVisible(!editMode && hasArticle);
 
         if (hasArticle) {
             // Update title and content for articles
@@ -640,14 +652,17 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
                 contentArea.setValue(currentArticle.getContent() != null ? currentArticle.getContent() : "");
             } else {
                 titleDisplay.setText(currentArticle.getTitle() != null ? currentArticle.getTitle() : "");
+                renderMetadataTable(currentArticle);
                 renderMarkdown(currentArticle.getContent());
             }
         } else if (!editMode) {
             // Keep default welcome content visible (set by showDefaultWelcome)
             // Title and markdown are already set, don't override
+            metadataDisplay.setVisible(false);
         } else {
             // In edit mode but no article (shouldn't normally happen)
             titleDisplay.setText("");
+            metadataDisplay.getElement().setProperty("innerHTML", "");
             titleField.clear();
             contentArea.clear();
             markdownPreview.setContent("");
@@ -966,6 +981,64 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             toggleCategoriesButton.setText("Expand all");
             toggleCategoriesButton.setIcon(VaadinIcon.CARET_RIGHT.create());
         }
+    }
+
+    private void renderMetadataTable(Article article) {
+        String createdBy = formatUserDisplay(article.getCreatedBy());
+        String createdAt = article.getCreatedAt() != null
+            ? article.getCreatedAt().format(METADATA_DATE_FORMAT)
+            : "Unknown";
+        String updatedBy = formatUserDisplay(article.getUpdatedBy());
+        String updatedAt = article.getUpdatedAt() != null
+            ? article.getUpdatedAt().format(METADATA_DATE_FORMAT)
+            : "Unknown";
+        ArticleStatus status = article.getStatus() != null ? article.getStatus() : ArticleStatus.DRAFT;
+        String statusBadgeClass = status == ArticleStatus.PUBLISHED
+            ? "status-badge status-badge-success"
+            : "status-badge status-badge-neutral";
+        String statusLabel = status == ArticleStatus.PUBLISHED ? "Published" : "Draft";
+
+        String html = "<div class=\"article-metadata-strip\">"
+            + "<div class=\"metadata-status-row\"><span class=\"" + statusBadgeClass + "\">" + escapeHtml(statusLabel) + "</span></div>"
+            + "<div class=\"metadata-grid-row\">"
+            + "<div class=\"metadata-grid-cell metadata-grid-label\">Created by</div>"
+            + "<div class=\"metadata-grid-cell metadata-grid-value\">" + escapeHtml(createdBy) + "</div>"
+            + "<div class=\"metadata-grid-cell metadata-grid-label\">Created date</div>"
+            + "<div class=\"metadata-grid-cell metadata-grid-value\">" + escapeHtml(createdAt) + "</div>"
+            + "</div>"
+            + "<div class=\"metadata-grid-row\">"
+            + "<div class=\"metadata-grid-cell metadata-grid-label\">Modified by</div>"
+            + "<div class=\"metadata-grid-cell metadata-grid-value\">" + escapeHtml(updatedBy) + "</div>"
+            + "<div class=\"metadata-grid-cell metadata-grid-label\">Modified date</div>"
+            + "<div class=\"metadata-grid-cell metadata-grid-value\">" + escapeHtml(updatedAt) + "</div>"
+            + "</div>"
+            + "</div>";
+        metadataDisplay.getElement().setProperty("innerHTML", html);
+    }
+
+    private String formatUserDisplay(io.avec.data.User user) {
+        if (user == null) {
+            return "Unknown";
+        }
+        if (user.getName() != null && !user.getName().isBlank()) {
+            return user.getName();
+        }
+        if (user.getUsername() != null && !user.getUsername().isBlank()) {
+            return user.getUsername();
+        }
+        return "Unknown";
+    }
+
+    private String escapeHtml(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&#39;");
     }
 
     private boolean isCreateCategoryOption(Category category) {

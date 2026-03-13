@@ -28,6 +28,10 @@ public class Article extends AbstractEntity {
     @JoinColumn(name = "created_by_id")
     private User createdBy;
 
+    @ManyToOne
+    @JoinColumn(name = "updated_by_id")
+    private User updatedBy;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
@@ -89,6 +93,14 @@ public class Article extends AbstractEntity {
 
     public void setCreatedBy(User createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public User getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(User updatedBy) {
+        this.updatedBy = updatedBy;
     }
 
     public LocalDateTime getCreatedAt() {
