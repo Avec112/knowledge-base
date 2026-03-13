@@ -3,15 +3,19 @@ package io.avec.knowledgebase.view;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
-import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.component.treegrid.TreeGrid;
+import com.vaadin.flow.data.provider.hierarchy.TreeData;
+import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.router.*;
 import io.avec.data.Role;
 import io.avec.knowledgebase.data.Article;
@@ -28,9 +32,11 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.ArrayList;
 
 import java.util.Optional;
 
@@ -44,14 +50,14 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final CategoryService categoryService;
     private final AuthenticatedUser authenticatedUser;
 
-    private final VerticalLayout articleList = new VerticalLayout();
+    private final TreeGrid<WikiType> articleTree = new TreeGrid<>();
     private final TextField titleField = new TextField("Title");
     private final ComboBox<Category> categoryField = new ComboBox<>("Category");
     private final TextArea contentArea = new TextArea("Content (Markdown)");
     private final Markdown markdownPreview = new Markdown("");
     private final H2 titleDisplay = new H2();
-
-    private Div selectedArticleDiv;
+    private final Map<String, WikiType> nodeBySlug = new HashMap<>();
+    private WikiType welcomeNode;
 
     private final Button createButton = new Button("Create");
     private final Button editButton = new Button("Edit");
@@ -64,6 +70,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private boolean editMode = false;
     private boolean previewMode = false;
     private boolean isAdmin = false;
+    private static final String WELCOME_SLUG = "welcome-to-knowledge";
 
     public KnowledgeBaseView(ArticleService articleService, CategoryService categoryService, AuthenticatedUser authenticatedUser) {
         this.articleService = articleService;
@@ -91,7 +98,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         if (slug != null && !slug.isEmpty()) {
 
             // Check if it's the welcome article
-            if ("welcome-to-knowledge".equals(slug)) {
+            if (WELCOME_SLUG.equals(slug)) {
                 showDefaultWelcome();
                 highlightSelectedArticle(null);
             } else {
@@ -150,89 +157,54 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
         VerticalLayout rightPanel = createRightPanel();
 
-        articleList.setSpacing(false);
-        articleList.setPadding(false);
-        articleList.setWidth("300px");
-        articleList.setHeightFull();
-        articleList.addClassName("kb-sidebar");
+        configureArticleTree();
+        articleTree.setWidthFull();
+        articleTree.getStyle().set("flex", "0 1 clamp(220px, 26vw, 360px)");
+        articleTree.setHeightFull();
+        articleTree.addClassName("kb-sidebar");
 
         rightPanel.setSizeFull();
         rightPanel.addClassName("kb-content-area");
 
-        layout.add(articleList, rightPanel);
+        layout.add(articleTree, rightPanel);
 
         return layout;
     }
 
     private void refreshArticleList() {
-        articleList.removeAll();
+        nodeBySlug.clear();
+        TreeData<WikiType> treeData = new TreeData<>();
+        List<WikiType> rootNodes = new ArrayList<>();
 
-        // Add welcome item first
-        Div welcomeDiv = createArticleListItem("Velkommen", "welcome-to-knowledge", null);
-        welcomeDiv.getElement().setAttribute("data-welcome", "true");
-        articleList.add(welcomeDiv);
+        welcomeNode = WikiType.welcome("Velkommen", WELCOME_SLUG);
+        rootNodes.add(welcomeNode);
+        treeData.addItem(null, welcomeNode);
+        nodeBySlug.put(WELCOME_SLUG, welcomeNode);
 
         try {
             // Get root categories
             List<Category> rootCategories = categoryService.findRootCategories();
-            System.out.println("Found " + rootCategories.size() + " root categories");
-
-            // Add categories and their articles
             for (Category category : rootCategories) {
-                System.out.println("Processing category: " + category.getName());
-                // Add category header
-                Div categoryHeader = createCategoryHeader(category);
-                articleList.add(categoryHeader);
-
-                // Add articles in this category
-                List<Article> articles = isAdmin ?
-                    articleService.findByCategory(category) :
-                    articleService.findByCategoryAndPublished(category);
-                System.out.println("  Found " + articles.size() + " articles in category: " + category.getName());
-
-                for (Article article : articles) {
-                    Div articleDiv = createArticleListItem(article.getTitle(), article.getSlug(), article);
-                    articleDiv.getStyle().set("padding-left", "var(--lumo-space-l)");
-                    articleList.add(articleDiv);
-                }
-
-            // Add subcategories if they exist
-            for (Category child : category.getChildren()) {
-                Div childCategoryHeader = createCategoryHeader(child);
-                childCategoryHeader.getStyle().set("padding-left", "var(--lumo-space-l)");
-                articleList.add(childCategoryHeader);
-
-                List<Article> childArticles = isAdmin ?
-                    articleService.findByCategory(child) :
-                    articleService.findByCategoryAndPublished(child);
-
-                for (Article article : childArticles) {
-                    Div articleDiv = createArticleListItem(article.getTitle(), article.getSlug(), article);
-                    articleDiv.getStyle().set("padding-left", "var(--lumo-space-xl)");
-                    articleList.add(articleDiv);
-                }
+                WikiType categoryNode = WikiType.category(category);
+                rootNodes.add(categoryNode);
+                treeData.addItem(null, categoryNode);
+                addCategoryChildren(treeData, categoryNode, category);
             }
-        }
 
             // Add uncategorized articles at the end
             List<Article> uncategorized = articleService.findUncategorized();
-            System.out.println("Found " + uncategorized.size() + " uncategorized articles");
             if (!uncategorized.isEmpty()) {
-                Div uncategorizedHeader = new Div();
-                uncategorizedHeader.setText("Ukategorisert");
-                uncategorizedHeader.getStyle()
-                    .set("font-weight", "600")
-                    .set("padding", "var(--lumo-space-s) var(--lumo-space-m)")
-                    .set("color", "var(--lumo-secondary-text-color)")
-                    .set("font-size", "var(--lumo-font-size-s)")
-                    .set("text-transform", "uppercase");
-                articleList.add(uncategorizedHeader);
-
+                WikiType uncategorizedNode = WikiType.section("Ukategorisert");
+                rootNodes.add(uncategorizedNode);
+                treeData.addItem(null, uncategorizedNode);
                 for (Article article : uncategorized) {
-                    Div articleDiv = createArticleListItem(article.getTitle(), article.getSlug(), article);
-                    articleList.add(articleDiv);
+                    WikiType articleNode = WikiType.article(article);
+                    treeData.addItem(uncategorizedNode, articleNode);
+                    nodeBySlug.put(article.getSlug(), articleNode);
                 }
             }
+
+            articleTree.setTreeData(treeData);
         } catch (Exception e) {
             System.err.println("Error refreshing article list: " + e.getMessage());
             e.printStackTrace();
@@ -240,82 +212,22 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         }
     }
 
-    private Div createCategoryHeader(Category category) {
-        Div header = new Div();
-        header.setText(category.getName());
-        header.getStyle()
-            .set("font-weight", "600")
-            .set("padding", "var(--lumo-space-s) var(--lumo-space-m)")
-            .set("color", "var(--lumo-secondary-text-color)")
-            .set("font-size", "var(--lumo-font-size-s)")
-            .set("text-transform", "uppercase")
-            .set("margin-top", "var(--lumo-space-m)");
-        return header;
-    }
-
-    private Div createArticleListItem(String title, String slug, Article article) {
-        Div div = new Div();
-        div.setText(title);
-        div.setWidthFull();
-        div.getStyle()
-            .set("padding", "var(--lumo-space-s) var(--lumo-space-m)")
-            .set("cursor", "pointer")
-            .set("border-bottom", "1px solid var(--lumo-contrast-10pct)")
-            .set("transition", "background-color 0.2s")
-            .set("box-sizing", "border-box");
-
-        div.getElement().addEventListener("mouseenter", e -> {
-            if (selectedArticleDiv != div) {
-                div.getStyle().set("background-color", "var(--lumo-contrast-5pct)");
-            }
-        });
-
-        div.getElement().addEventListener("mouseleave", e -> {
-            if (selectedArticleDiv != div) {
-                div.getStyle().set("background-color", "transparent");
-            }
-        });
-
-        div.addClickListener(e -> {
-            if (article != null) {
-                showArticle(article);
-            } else {
-                getUI().ifPresent(ui -> ui.navigate("knowledge/" + slug));
-            }
-        });
-
-        return div;
-    }
-
     private void highlightSelectedArticle(Article article) {
-        // Reset previous selection
-        if (selectedArticleDiv != null) {
-            selectedArticleDiv.getStyle()
-                .set("background-color", "transparent")
-                .set("font-weight", "normal");
+        if (article == null) {
+            if (welcomeNode != null) {
+                articleTree.select(welcomeNode);
+            } else {
+                articleTree.deselectAll();
+            }
+            return;
         }
 
-        // Find and highlight new selection
-        articleList.getChildren().forEach(component -> {
-            if (component instanceof Div div) {
-                boolean isMatch;
-                if (article == null) {
-                    // Highlight welcome item
-                    isMatch = div.getElement().hasAttribute("data-welcome");
-                } else {
-                    // Highlight article by comparing title
-                    isMatch = div.getText().equals(article.getTitle());
-                }
-
-                if (isMatch) {
-                    div.getStyle()
-                        .set("background-color", "var(--lumo-primary-color-10pct)")
-                        .set("font-weight", "600")
-                        ;
-                    selectedArticleDiv = div;
-                }
-            }
-        });
+        WikiType selectedNode = nodeBySlug.get(article.getSlug());
+        if (selectedNode != null) {
+            articleTree.select(selectedNode);
+        } else {
+            articleTree.deselectAll();
+        }
     }
 
     private HorizontalLayout createButtonBarLayout() {
@@ -553,6 +465,132 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             this.markdownPreview.setContent(markdown);
         } else {
             this.markdownPreview.setContent("");
+        }
+    }
+
+    private void configureArticleTree() {
+        var menuColumn = articleTree.addHierarchyColumn(WikiType::label)
+            .setHeader((String) null)
+            .setAutoWidth(true)
+            .setFlexGrow(1);
+        menuColumn.setSortable(false);
+        menuColumn.setResizable(false);
+        menuColumn.setRenderer(new ComponentRenderer<>(node -> {
+                HorizontalLayout itemLayout = new HorizontalLayout();
+                itemLayout.setSpacing(true);
+                itemLayout.setPadding(false);
+                itemLayout.setMargin(false);
+                itemLayout.setAlignItems(Alignment.CENTER);
+                itemLayout.setWidthFull();
+
+                Icon icon = switch (node.type()) {
+                    case WELCOME -> VaadinIcon.HOME.create();
+                    case CATEGORY -> articleTree.isExpanded(node) ? VaadinIcon.FOLDER_OPEN.create() : VaadinIcon.FOLDER.create();
+                    case ARTICLE -> VaadinIcon.FILE_O.create();
+                    case SECTION -> articleTree.isExpanded(node) ? VaadinIcon.FOLDER_OPEN.create() : VaadinIcon.FOLDER.create();
+                };
+                icon.getStyle().set("color", "var(--lumo-secondary-text-color)");
+                icon.setSize("var(--lumo-icon-size-s)");
+
+                Span label = new Span(node.label());
+                if (node.type() == WikiNodeType.CATEGORY || node.type() == WikiNodeType.SECTION) {
+                    label.getStyle().set("font-weight", "600");
+                }
+                if (node.type() == WikiNodeType.CATEGORY) {
+                    label.getStyle()
+                        .set("color", "var(--_lumo-button-text-color, var(--lumo-primary-text-color))")
+                    ;
+                }
+                label.getStyle()
+                    .set("overflow", "hidden")
+                    .set("text-overflow", "ellipsis")
+                    .set("white-space", "nowrap")
+                    .set("flex", "1");
+                label.getElement().setProperty("title", node.label());
+
+                itemLayout.add(icon, label);
+                return itemLayout;
+            }));
+
+        articleTree.setPartNameGenerator(node -> node.type() == WikiNodeType.CATEGORY ? "category" : null);
+        articleTree.setAllRowsVisible(true);
+        articleTree.addExpandListener(event -> articleTree.getDataProvider().refreshAll());
+        articleTree.addCollapseListener(event -> articleTree.getDataProvider().refreshAll());
+        articleTree.addSelectionListener(event -> {
+            event.getFirstSelectedItem().ifPresent(node -> {
+                if (node.type() == WikiNodeType.WELCOME) {
+                    if (currentArticle == null) {
+                        return;
+                    }
+                    getUI().ifPresent(ui -> ui.navigate("knowledge/" + WELCOME_SLUG));
+                } else if (node.type() == WikiNodeType.ARTICLE && node.article() != null) {
+                    if (currentArticle != null && currentArticle.getId() != null
+                        && currentArticle.getId().equals(node.article().getId())) {
+                        return;
+                    }
+                    showArticle(node.article());
+                }
+            });
+        });
+        articleTree.addItemClickListener(event -> {
+            WikiType node = event.getItem();
+            if (node.type() == WikiNodeType.CATEGORY || node.type() == WikiNodeType.SECTION) {
+                if (articleTree.isExpanded(node)) {
+                    articleTree.collapse(node);
+                } else {
+                    articleTree.expand(node);
+                }
+            }
+        });
+    }
+
+    private void addCategoryChildren(TreeData<WikiType> treeData, WikiType parentNode, Category category) {
+        List<Article> articles = isAdmin ?
+            articleService.findByCategory(category) :
+            articleService.findByCategoryAndPublished(category);
+
+        for (Article article : articles) {
+            WikiType articleNode = WikiType.article(article);
+            treeData.addItem(parentNode, articleNode);
+            nodeBySlug.put(article.getSlug(), articleNode);
+        }
+
+        for (Category child : category.getChildren()) {
+            WikiType childCategoryNode = WikiType.category(child);
+            treeData.addItem(parentNode, childCategoryNode);
+            addCategoryChildren(treeData, childCategoryNode, child);
+        }
+    }
+
+    private enum WikiNodeType {
+        WELCOME,
+        CATEGORY,
+        ARTICLE,
+        SECTION
+    }
+
+    private record WikiType(
+        WikiNodeType type,
+        String label,
+        Category category,
+        Article article
+    ) {
+        private static WikiType welcome(String label, String slug) {
+            Article welcomeArticle = new Article();
+            welcomeArticle.setSlug(slug);
+            return new WikiType(WikiNodeType.WELCOME, label, null, welcomeArticle);
+        }
+
+        private static WikiType category(Category category) {
+            return new WikiType(WikiNodeType.CATEGORY, category.getName(), category, null);
+        }
+
+        private static WikiType article(Article article) {
+            return new WikiType(WikiNodeType.ARTICLE, article.getTitle(), null, article);
+        }
+
+        private static WikiType section(String label) {
+            return new WikiType(WikiNodeType.SECTION, label, null, null);
         }
     }
 }

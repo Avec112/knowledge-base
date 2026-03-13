@@ -1,8 +1,26 @@
 /* KnowledgeBase Layout Areas */
 .kb-sidebar {
-  background: var(--lumo-contrast-5pct);
+  background: var(--lumo-base-color);
   border-right: 1px solid var(--lumo-contrast-10pct);
   height: 100%;
+  min-width: 220px;
+  max-width: 360px;
+  --vaadin-grid-tree-toggle-level-offset: 0.35em;
+  --vaadin-grid-tree-toggle-leaf-offset: 0em;
+}
+
+.kb-sidebar::part(header-row),
+.kb-sidebar::part(header-cell) {
+  display: none;
+}
+
+.kb-sidebar::part(first-column-cell) {
+  padding-inline-start: 0;
+  padding-inline-end: var(--lumo-space-xs);
+}
+
+.kb-sidebar::part(category) {
+  background: var(--lumo-contrast-5pct);
 }
 
 .kb-content-area {
