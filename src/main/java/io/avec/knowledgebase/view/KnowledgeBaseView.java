@@ -19,6 +19,7 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.treegrid.TreeGrid;
 import com.vaadin.flow.component.grid.dnd.GridDropLocation;
 import com.vaadin.flow.component.grid.dnd.GridDropMode;
+import com.vaadin.flow.data.provider.DataProvider;
 import com.vaadin.flow.data.provider.hierarchy.TreeData;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.router.*;
@@ -44,6 +45,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -103,6 +105,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private boolean editMode = false;
     private boolean previewMode = false;
     private boolean isAdmin = false;
+    private String currentSearchQuery = "";
     private static final String WELCOME_SLUG = "welcome-to-knowledge";
     private static final String MARKDOWN_HELP_SLUG = "markdown-syntax";
     private static final String CREATE_CATEGORY_SLUG = "__create_category__";
@@ -252,7 +255,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             }
 
             articleTree.setTreeData(treeData);
-            menuSearch.setItems(quickJumpItems);
+            menuSearch.getDataProvider().refreshAll();
             menuSearch.clear();
             updateCategoryToggleButton();
         } catch (Exception e) {
@@ -936,21 +939,54 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         menuSearch.setWidthFull();
         menuSearch.setItemLabelGenerator(WikiType::label);
         menuSearch.setAllowCustomValue(true);
+        menuSearch.setRenderer(new ComponentRenderer<>(item -> {
+            VerticalLayout layout = new VerticalLayout();
+            layout.setPadding(false);
+            layout.setSpacing(false);
+            Span title = new Span(item.label());
+            title.getStyle().set("font-weight", "bold");
+            layout.add(title);
+            if (item.type() == WikiNodeType.ARTICLE && item.article() != null && !currentSearchQuery.isBlank()) {
+                String snippet = extractSnippet(item.article().getContent(), currentSearchQuery);
+                if (!snippet.isEmpty()) {
+                    Span snippetSpan = new Span(snippet);
+                    snippetSpan.getStyle()
+                        .set("font-size", "var(--lumo-font-size-s)")
+                        .set("color", "var(--lumo-secondary-text-color)");
+                    layout.add(snippetSpan);
+                }
+            }
+            return layout;
+        }));
         menuSearch.addValueChangeListener(event -> {
             if (event.getValue() != null) {
                 handleQuickJump(event.getValue());
             }
         });
-        menuSearch.addCustomValueSetListener(event -> {
-            String query = event.getDetail() == null ? "" : event.getDetail().trim().toLowerCase();
-            if (query.isEmpty()) {
-                return;
+        menuSearch.setItems(DataProvider.fromFilteringCallbacks(
+            query -> {
+                String filter = query.getFilter().orElse("").trim();
+                if (filter.length() < 2) {
+                    currentSearchQuery = "";
+                    return quickJumpItems.stream().skip(query.getOffset()).limit(query.getLimit());
+                }
+                currentSearchQuery = filter;
+                String q = filter.toLowerCase();
+                List<Article> results = isAdmin
+                    ? articleService.search(filter)
+                    : articleService.searchPublished(filter);
+                results.sort(Comparator.comparingInt(a ->
+                    a.getTitle().toLowerCase().contains(q) ? 0 : 1));
+                return results.stream().map(WikiType::article).skip(query.getOffset()).limit(query.getLimit());
+            },
+            query -> {
+                String filter = query.getFilter().orElse("").trim();
+                if (filter.length() < 2) return quickJumpItems.size();
+                return isAdmin
+                    ? articleService.search(filter).size()
+                    : articleService.searchPublished(filter).size();
             }
-            quickJumpItems.stream()
-                .filter(item -> item.label() != null && item.label().toLowerCase().contains(query))
-                .findFirst()
-                .ifPresent(this::handleQuickJump);
-        });
+        ));
         toggleCategoriesButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE, ButtonVariant.LUMO_SMALL);
         toggleCategoriesButton.addClickListener(event -> toggleAllCategories());
 
@@ -1163,7 +1199,38 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             articleTree.expand(item);
             articleTree.select(item);
         }
+        currentSearchQuery = "";
         menuSearch.clear();
+    }
+
+    private String extractSnippet(String content, String query) {
+        if (content == null || query == null || query.isBlank()) return "";
+        String plain = stripMarkdown(content);
+        int idx = plain.toLowerCase().indexOf(query.toLowerCase());
+        if (idx < 0) return "";
+        int start = Math.max(0, idx - 40);
+        int end = Math.min(plain.length(), idx + query.length() + 40);
+        String snippet = plain.substring(start, end);
+        if (start > 0) snippet = "\u2026" + snippet;
+        if (end < plain.length()) snippet = snippet + "\u2026";
+        return snippet;
+    }
+
+    private String stripMarkdown(String markdown) {
+        if (markdown == null) return "";
+        return markdown
+            .replaceAll("(?s)```.*?```", " ")
+            .replaceAll("`([^`]*)`", "$1")
+            .replaceAll("!\\[.*?\\]\\(.*?\\)", "")
+            .replaceAll("\\[([^\\]]+)\\]\\(.*?\\)", "$1")
+            .replaceAll("(?m)^#{1,6}\\s+", "")
+            .replaceAll("(\\*{1,3}|_{1,3})(.+?)\\1", "$2")
+            .replaceAll("(?m)^>\\s+", "")
+            .replaceAll("(?m)^[-*_]{3,}\\s*$", "")
+            .replaceAll("(?m)^\\s*[-*+]\\s+", "")
+            .replaceAll("(?m)^\\s*\\d+\\.\\s+", "")
+            .replaceAll("\\n+", " ")
+            .trim();
     }
 
     private void expandAncestors(WikiType item) {

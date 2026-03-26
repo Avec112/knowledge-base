@@ -41,6 +41,16 @@ public class ArticleService {
         return articleRepository.findByCategoryIsNullOrderBySortOrder();
     }
 
+    public List<Article> search(String query) {
+        if (query == null || query.isBlank()) return List.of();
+        return articleRepository.searchByTitleOrContent(query.trim());
+    }
+
+    public List<Article> searchPublished(String query) {
+        if (query == null || query.isBlank()) return List.of();
+        return articleRepository.searchByTitleOrContentAndStatus(query.trim(), ArticleStatus.PUBLISHED);
+    }
+
     public Optional<Article> findById(Long id) {
         return articleRepository.findById(id);
     }
