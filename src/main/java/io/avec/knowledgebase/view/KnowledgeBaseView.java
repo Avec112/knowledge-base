@@ -61,7 +61,7 @@ import java.util.function.Consumer;
 @Route(value = "knowledge", layout = MainLayout.class)
 @Menu(order = 0, icon = LineAwesomeIconUrl.GRADUATION_CAP_SOLID)
 @PermitAll
-public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter<String> {
+public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter<String>, BeforeLeaveObserver {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KnowledgeBaseView.class);
 
@@ -139,6 +139,9 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
     @Override
     public void setParameter(BeforeEvent event, @OptionalParameter String slug) {
+        editMode = false;
+        previewMode = false;
+        markdownHelpVisible = false;
         if (slug != null && !slug.isEmpty()) {
 
             // Check if it's the welcome article
@@ -150,6 +153,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
                 articleService.findVisibleBySlug(slug).ifPresentOrElse(
                     article -> {
                         currentArticle = article;
+                        currentCategory = null;
                         highlightSelectedArticle(article);
                         updateUI();
                     },
@@ -168,12 +172,14 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
     private void showDefaultWelcome() {
         currentArticle = null;
+        currentCategory = null;
         titleDisplay.setText("Welcome to KnowledgeBase");
         metadataDisplay.getElement().setProperty("innerHTML", "");
         metadataDisplay.setVisible(false);
+        markdownPreview.setContent("# Welcome to KnowledgeBase\n\nSelect an article from the list to get started.");
+        markdownPreview.setVisible(true);
 
-        try {
-            InputStream is = getClass().getClassLoader().getResourceAsStream("knowledge/welcome-to-knowledge.md");
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("knowledge/welcome-to-knowledge.md")) {
             if (is != null) {
                 String content = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
                     .lines()
@@ -182,8 +188,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
                 markdownPreview.setVisible(true);
             }
         } catch (Exception e) {
-            markdownPreview.setContent("# Welcome to KnowledgeBase\n\nSelect an article from the list to get started.");
-            markdownPreview.setVisible(true);
+            LOGGER.warn("Could not load the knowledge base welcome content", e);
         }
 
         updateUI();
@@ -566,10 +571,13 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
         try {
             currentArticle = articleService.save(currentArticle);
+            editMode = false;
+            previewMode = false;
+            markdownHelpVisible = false;
             refreshArticleList();
             highlightSelectedArticle(currentArticle);
-            editMode = false;
             updateUI();
+            getUI().ifPresent(ui -> ui.navigate("knowledge/" + currentArticle.getSlug()));
             Notification.show("Article saved successfully");
         } catch (Exception e) {
             Notification.show("Error saving article: " + e.getMessage());
@@ -584,8 +592,27 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         articleService.delete(currentArticle);
         currentArticle = null;
         refreshArticleList();
-        updateUI();
+        getUI().ifPresent(ui -> ui.navigate("knowledge/" + WELCOME_SLUG));
         Notification.show("Article deleted");
+    }
+
+    @Override
+    public void beforeLeave(BeforeLeaveEvent event) {
+        if (!editMode) {
+            return;
+        }
+
+        BeforeLeaveEvent.ContinueNavigationAction navigation = event.postpone();
+        ConfirmDialog dialog = new ConfirmDialog();
+        dialog.setHeader("Discard unsaved changes?");
+        dialog.setText("Your article changes have not been saved.");
+        dialog.setCancelable(true);
+        dialog.setCancelText("Continue editing");
+        dialog.setConfirmText("Discard changes");
+        dialog.setConfirmButtonTheme("error primary");
+        dialog.addConfirmListener(confirmEvent -> navigation.proceed());
+        dialog.addCancelListener(cancelEvent -> navigation.cancel());
+        dialog.open();
     }
 
     private void openCreateCategoryDialog() {
@@ -719,8 +746,14 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         previewButton.setVisible(editMode);
         saveButton.setVisible(editMode);
         cancelButton.setVisible(editMode);
-        deleteButton.setVisible(hasId && isAdmin);
+        deleteButton.setVisible(hasId && !editMode && isAdmin);
         deleteCategoryButton.setVisible(hasCategory && !editMode && isAdmin);
+
+        articleTree.setEnabled(!editMode);
+        menuSearch.setEnabled(!editMode);
+        toggleCategoriesButton.setEnabled(!editMode);
+        articleTree.setRowsDraggable(isAdmin && !editMode);
+        articleTree.setDropMode(isAdmin && !editMode ? GridDropMode.BETWEEN : null);
 
         // Update content visibility
         boolean showEditor = editMode && !previewMode;
