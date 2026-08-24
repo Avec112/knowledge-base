@@ -15,13 +15,13 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     List<Article> findByStatusOrderByUpdatedAtDesc(ArticleStatus status);
 
-    List<Article> findByCategoryOrderBySortOrder(Category category);
+    List<Article> findByCategoryOrderBySortOrderAscIdAsc(Category category);
 
-    List<Article> findByCategoryAndStatusOrderBySortOrder(Category category, ArticleStatus status);
+    List<Article> findByCategoryAndStatusOrderBySortOrderAscIdAsc(Category category, ArticleStatus status);
 
-    List<Article> findByCategoryIsNullOrderBySortOrder();
+    List<Article> findByCategoryIsNullOrderBySortOrderAscIdAsc();
 
-    List<Article> findByCategoryIsNullAndStatusOrderBySortOrder(ArticleStatus status);
+    List<Article> findByCategoryIsNullAndStatusOrderBySortOrderAscIdAsc(ArticleStatus status);
 
     Optional<Article> findBySlug(String slug);
 

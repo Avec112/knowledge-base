@@ -53,7 +53,7 @@ class ArticleServiceVisibilityTest {
     void userGetsOnlyPublishedUncategorizedArticles() {
         Article published = article("published", ArticleStatus.PUBLISHED);
         authenticate("ROLE_USER");
-        when(articleRepository.findByCategoryIsNullAndStatusOrderBySortOrder(ArticleStatus.PUBLISHED))
+        when(articleRepository.findByCategoryIsNullAndStatusOrderBySortOrderAscIdAsc(ArticleStatus.PUBLISHED))
             .thenReturn(List.of(published));
 
         assertThat(articleService.findVisibleUncategorized()).containsExactly(published);
@@ -64,7 +64,7 @@ class ArticleServiceVisibilityTest {
         Article draft = article("draft", ArticleStatus.DRAFT);
         Article published = article("published", ArticleStatus.PUBLISHED);
         authenticate("ROLE_ADMIN");
-        when(articleRepository.findByCategoryIsNullOrderBySortOrder()).thenReturn(List.of(draft, published));
+        when(articleRepository.findByCategoryIsNullOrderBySortOrderAscIdAsc()).thenReturn(List.of(draft, published));
 
         assertThat(articleService.findVisibleUncategorized()).containsExactly(draft, published);
     }
@@ -74,7 +74,7 @@ class ArticleServiceVisibilityTest {
         Category category = new Category();
         Article published = article("published", ArticleStatus.PUBLISHED);
         authenticate("ROLE_USER");
-        when(articleRepository.findByCategoryAndStatusOrderBySortOrder(category, ArticleStatus.PUBLISHED))
+        when(articleRepository.findByCategoryAndStatusOrderBySortOrderAscIdAsc(category, ArticleStatus.PUBLISHED))
             .thenReturn(List.of(published));
 
         assertThat(articleService.findVisibleByCategory(category)).containsExactly(published);
@@ -86,7 +86,7 @@ class ArticleServiceVisibilityTest {
         Article draft = article("draft", ArticleStatus.DRAFT);
         Article published = article("published", ArticleStatus.PUBLISHED);
         authenticate("ROLE_ADMIN");
-        when(articleRepository.findByCategoryOrderBySortOrder(category)).thenReturn(List.of(draft, published));
+        when(articleRepository.findByCategoryOrderBySortOrderAscIdAsc(category)).thenReturn(List.of(draft, published));
 
         assertThat(articleService.findVisibleByCategory(category)).containsExactly(draft, published);
     }

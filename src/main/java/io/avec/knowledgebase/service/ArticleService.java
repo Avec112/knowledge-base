@@ -36,28 +36,28 @@ public class ArticleService {
 
     @PreAuthorize("hasRole('ADMIN')")
     public List<Article> findByCategory(Category category) {
-        return articleRepository.findByCategoryOrderBySortOrder(category);
+        return articleRepository.findByCategoryOrderBySortOrderAscIdAsc(category);
     }
 
     public List<Article> findByCategoryAndPublished(Category category) {
-        return articleRepository.findByCategoryAndStatusOrderBySortOrder(category, ArticleStatus.PUBLISHED);
+        return articleRepository.findByCategoryAndStatusOrderBySortOrderAscIdAsc(category, ArticleStatus.PUBLISHED);
     }
 
     public List<Article> findVisibleByCategory(Category category) {
         return canViewDrafts()
-            ? articleRepository.findByCategoryOrderBySortOrder(category)
-            : articleRepository.findByCategoryAndStatusOrderBySortOrder(category, ArticleStatus.PUBLISHED);
+            ? articleRepository.findByCategoryOrderBySortOrderAscIdAsc(category)
+            : articleRepository.findByCategoryAndStatusOrderBySortOrderAscIdAsc(category, ArticleStatus.PUBLISHED);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     public List<Article> findUncategorized() {
-        return articleRepository.findByCategoryIsNullOrderBySortOrder();
+        return articleRepository.findByCategoryIsNullOrderBySortOrderAscIdAsc();
     }
 
     public List<Article> findVisibleUncategorized() {
         return canViewDrafts()
-            ? articleRepository.findByCategoryIsNullOrderBySortOrder()
-            : articleRepository.findByCategoryIsNullAndStatusOrderBySortOrder(ArticleStatus.PUBLISHED);
+            ? articleRepository.findByCategoryIsNullOrderBySortOrderAscIdAsc()
+            : articleRepository.findByCategoryIsNullAndStatusOrderBySortOrderAscIdAsc(ArticleStatus.PUBLISHED);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
