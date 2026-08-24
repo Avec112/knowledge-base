@@ -32,14 +32,14 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     boolean existsByCategory(Category category);
 
     @Query("SELECT a FROM Article a WHERE " +
-           "LOWER(a.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(a.content) LIKE LOWER(CONCAT('%', :query, '%')) " +
+           "LOWER(a.title) LIKE LOWER(CONCAT('%', :query, '%')) ESCAPE '!' OR " +
+           "LOWER(a.content) LIKE LOWER(CONCAT('%', :query, '%')) ESCAPE '!' " +
            "ORDER BY a.updatedAt DESC")
     List<Article> searchByTitleOrContent(@Param("query") String query);
 
     @Query("SELECT a FROM Article a WHERE a.status = :status AND (" +
-           "LOWER(a.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(a.content) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "LOWER(a.title) LIKE LOWER(CONCAT('%', :query, '%')) ESCAPE '!' OR " +
+           "LOWER(a.content) LIKE LOWER(CONCAT('%', :query, '%')) ESCAPE '!') " +
            "ORDER BY a.updatedAt DESC")
     List<Article> searchByTitleOrContentAndStatus(@Param("query") String query,
                                                    @Param("status") ArticleStatus status);

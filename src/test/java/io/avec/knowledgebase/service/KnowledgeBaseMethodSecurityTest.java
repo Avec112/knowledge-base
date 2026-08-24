@@ -71,7 +71,7 @@ class KnowledgeBaseMethodSecurityTest {
         categoryService.delete(category);
         categoryService.reorderRootCategories(List.of(category));
 
-        verify(articleRepository).save(article);
+        verify(articleRepository).saveAndFlush(article);
         verify(articleRepository).delete(article);
         verify(categoryRepository).save(category);
         verify(categoryRepository).delete(category);

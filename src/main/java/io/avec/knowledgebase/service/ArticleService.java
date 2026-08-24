@@ -4,6 +4,7 @@ import io.avec.knowledgebase.data.Article;
 import io.avec.knowledgebase.data.ArticleRepository;
 import io.avec.knowledgebase.data.ArticleStatus;
 import io.avec.knowledgebase.data.Category;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -62,12 +63,12 @@ public class ArticleService {
     @PreAuthorize("hasRole('ADMIN')")
     public List<Article> search(String query) {
         if (query == null || query.isBlank()) return List.of();
-        return articleRepository.searchByTitleOrContent(query.trim());
+        return articleRepository.searchByTitleOrContent(escapeLike(query.trim()));
     }
 
     public List<Article> searchPublished(String query) {
         if (query == null || query.isBlank()) return List.of();
-        return articleRepository.searchByTitleOrContentAndStatus(query.trim(), ArticleStatus.PUBLISHED);
+        return articleRepository.searchByTitleOrContentAndStatus(escapeLike(query.trim()), ArticleStatus.PUBLISHED);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -102,7 +103,13 @@ public class ArticleService {
         if (article.getSlug() == null || article.getSlug().isEmpty()) {
             article.setSlug(generateUniqueSlug(article.getTitle(), null));
         }
-        return articleRepository.save(article);
+        try {
+            return articleRepository.saveAndFlush(article);
+        } catch (DataIntegrityViolationException exception) {
+            throw new IllegalStateException(
+                "Article could not be saved because slug '" + article.getSlug() + "' is already in use",
+                exception);
+        }
     }
 
     @Transactional
@@ -126,6 +133,13 @@ public class ArticleService {
         }
 
         return slug;
+    }
+
+    private String escapeLike(String query) {
+        return query
+            .replace("!", "!!")
+            .replace("%", "!%")
+            .replace("_", "!_");
     }
 
     private String generateSlugFromTitle(String title) {

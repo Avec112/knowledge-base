@@ -488,8 +488,6 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         contentEditorLayout.setMargin(false);
         contentEditorLayout.setAlignItems(Alignment.STRETCH);
         contentEditorLayout.add(contentArea, markdownHelpPanel);
-        contentEditorLayout.setFlexGrow(1, contentArea);
-        contentEditorLayout.setFlexGrow(0, markdownHelpPanel);
         contentEditorLayout.setVisible(false);
 
         // Markdown preview (read mode)
@@ -994,7 +992,6 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         articleTree.setPartNameGenerator(node ->
             node != null && node.type() == WikiNodeType.CATEGORY ? "category" : null
         );
-        articleTree.setAllRowsVisible(true);
         configureCategoryDragAndDrop();
         articleTree.addExpandListener(event -> articleTree.getDataProvider().refreshAll());
         articleTree.addExpandListener(event -> updateCategoryToggleButton());
