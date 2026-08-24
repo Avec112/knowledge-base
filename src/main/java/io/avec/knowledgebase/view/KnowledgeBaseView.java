@@ -18,11 +18,13 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.treegrid.TreeGrid;
+import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.grid.dnd.GridDropLocation;
 import com.vaadin.flow.component.grid.dnd.GridDropMode;
 import com.vaadin.flow.data.provider.DataProvider;
 import com.vaadin.flow.data.provider.hierarchy.TreeData;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
+import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.*;
 import io.avec.data.Role;
 import io.avec.knowledgebase.data.Article;
@@ -80,9 +82,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final HorizontalLayout contentEditorLayout = new HorizontalLayout();
     private final Markdown markdownHelpPreview = new Markdown("");
     private final Markdown markdownPreview = new Markdown("");
+    private final Markdown editorPreview = new Markdown("");
     private final H2 titleDisplay = new H2();
     private final Div metadataDisplay = new Div();
     private final Div markdownHelpPanel = new Div();
+    private final Div editorPreviewPanel = new Div();
     private final ComboBox<WikiType> menuSearch = new ComboBox<>();
     private final Button toggleCategoriesButton = new Button();
     private final Map<String, WikiType> nodeBySlug = new HashMap<>();
@@ -92,16 +96,24 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private WikiType welcomeNode;
     private WikiType draggedNode;
 
-    private final Button createButton = new Button("Create");
-    private final Button createCategoryButton = new Button("Create");
+    private final Button createButton = new Button("New article");
+    private final Button createCategoryButton = new Button("New category");
     private final Button editButton = new Button("Edit");
-    private final Button editCategoryButton = new Button("Edit");
+    private final Button editCategoryButton = new Button("Edit category");
     private final Button previewButton = new Button("Preview");
     private final Button saveButton = new Button("Save");
     private final Button cancelButton = new Button("Cancel");
     private final Button deleteButton = new Button("Delete");
-    private final Button deleteCategoryButton = new Button("Delete");
+    private final Button deleteCategoryButton = new Button("Delete category");
     private final Button exportButton = new Button("Export");
+
+    private final VerticalLayout sidebar = new VerticalLayout();
+    private final VerticalLayout editorLayout = new VerticalLayout();
+    private final Div articleColumn = new Div();
+    private final HorizontalLayout crumbs = new HorizontalLayout();
+    private final Span editingBadge = new Span("Editing");
+    private final Span headerDivider = new Span();
+    private Anchor exportLink;
 
     private Article currentArticle;
     private Category currentCategory;
@@ -130,10 +142,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         setPadding(false);
         setSpacing(false);
 
-        HorizontalLayout buttonBarLayout = createButtonBarLayout();
-        add(buttonBarLayout);
-        HorizontalLayout mainLayout = createMainLayout();
-        add(mainLayout);
+        add(createMainLayout());
 
         refreshArticleList();
     }
@@ -207,20 +216,129 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         layout.setPadding(false);
         layout.setSpacing(false);
 
+        configureArticleTree();
+        VerticalLayout sidebarLayout = createSidebar();
         VerticalLayout rightPanel = createRightPanel();
 
-        configureArticleTree();
-        articleTree.setWidthFull();
-        articleTree.getStyle().set("flex", "0 1 clamp(220px, 26vw, 360px)");
-        articleTree.setHeightFull();
-        articleTree.addClassName("kb-sidebar");
-
-        rightPanel.setSizeFull();
-        rightPanel.addClassName("kb-content-area");
-
-        layout.add(articleTree, rightPanel);
+        layout.add(sidebarLayout, rightPanel);
+        layout.setFlexGrow(0, sidebarLayout);
+        layout.setFlexGrow(1, rightPanel);
 
         return layout;
+    }
+
+    private VerticalLayout createSidebar() {
+        sidebar.addClassName("kb-sidebar");
+        sidebar.setPadding(false);
+        sidebar.setSpacing(false);
+        sidebar.setHeightFull();
+        sidebar.getStyle().set("flex", "0 1 clamp(220px, 26vw, 360px)");
+
+        VerticalLayout top = new VerticalLayout();
+        top.addClassName("kb-sidebar-top");
+        top.setPadding(false);
+        top.setSpacing(false);
+        top.setWidthFull();
+        top.add(menuSearch, toggleCategoriesButton);
+
+        articleTree.addClassName("kb-tree");
+        articleTree.setWidthFull();
+        articleTree.addThemeVariants(GridVariant.LUMO_NO_BORDER, GridVariant.LUMO_NO_ROW_BORDERS, GridVariant.LUMO_COMPACT);
+
+        HorizontalLayout footer = new HorizontalLayout();
+        footer.addClassName("kb-sidebar-footer");
+        footer.setWidthFull();
+        footer.setPadding(false);
+        footer.setSpacing(false);
+
+        createButton.setIcon(VaadinIcon.PLUS.create());
+        createButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+        createButton.addClickListener(e -> createNewArticle());
+        createButton.setVisible(false);
+
+        createCategoryButton.setIcon(VaadinIcon.PLUS.create());
+        createCategoryButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+        createCategoryButton.addClickListener(e -> openCreateCategoryDialog());
+        createCategoryButton.setVisible(false);
+
+        footer.add(createButton, createCategoryButton);
+
+        sidebar.add(top, articleTree, footer);
+        sidebar.setFlexGrow(1, articleTree);
+        return sidebar;
+    }
+
+    private HorizontalLayout createContentHeader() {
+        HorizontalLayout header = new HorizontalLayout();
+        header.addClassName("kb-content-header");
+        header.setWidthFull();
+        header.setPadding(false);
+        header.setSpacing(false);
+        header.setAlignItems(Alignment.CENTER);
+        header.setJustifyContentMode(JustifyContentMode.BETWEEN);
+
+        crumbs.addClassName("kb-crumbs");
+        crumbs.setPadding(false);
+        crumbs.setSpacing(false);
+        crumbs.setAlignItems(Alignment.CENTER);
+
+        editingBadge.addClassName("status-badge");
+        editingBadge.addClassName("status-badge-neutral");
+        editingBadge.addClassName("kb-editing-badge");
+
+        HorizontalLayout actions = new HorizontalLayout();
+        actions.addClassName("kb-header-actions");
+        actions.setPadding(false);
+        actions.setSpacing(false);
+        actions.setAlignItems(Alignment.CENTER);
+
+        editButton.setIcon(VaadinIcon.PENCIL.create());
+        editButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+        editButton.addClickListener(e -> enableEditMode());
+        editButton.setVisible(false);
+
+        deleteButton.setIcon(VaadinIcon.TRASH.create());
+        deleteButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
+        deleteButton.addClickListener(e -> deleteArticle());
+        deleteButton.setVisible(false);
+
+        editCategoryButton.setIcon(VaadinIcon.FOLDER_O.create());
+        editCategoryButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+        editCategoryButton.addClickListener(e -> openEditCategoryDialog());
+        editCategoryButton.setVisible(false);
+
+        deleteCategoryButton.setIcon(VaadinIcon.FOLDER_O.create());
+        deleteCategoryButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
+        deleteCategoryButton.addClickListener(e -> deleteCategory());
+        deleteCategoryButton.setVisible(false);
+
+        previewButton.setIcon(VaadinIcon.EYE.create());
+        previewButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+        previewButton.addClickListener(e -> togglePreview());
+        previewButton.setVisible(false);
+
+        cancelButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+        cancelButton.addClickListener(e -> cancelEdit());
+        cancelButton.setVisible(false);
+
+        saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
+        saveButton.addClickListener(e -> saveArticle());
+        saveButton.setVisible(false);
+
+        headerDivider.addClassName("kb-header-divider");
+        headerDivider.setVisible(false);
+
+        exportButton.setIcon(VaadinIcon.DOWNLOAD_ALT.create());
+        exportButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+        exportLink = new Anchor(createExportHandler(), "");
+        exportLink.getElement().setAttribute("download", true);
+        exportLink.add(exportButton);
+
+        actions.add(editCategoryButton, deleteCategoryButton, editButton, deleteButton,
+            headerDivider, exportLink, previewButton, cancelButton, saveButton);
+
+        header.add(crumbs, actions);
+        return header;
     }
 
     private void refreshArticleList() {
@@ -292,77 +410,6 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         }
     }
 
-    private HorizontalLayout createButtonBarLayout() {
-        // Button bar
-        HorizontalLayout buttonBar = new HorizontalLayout();
-        buttonBar.setWidthFull();
-        buttonBar.setJustifyContentMode(JustifyContentMode.BETWEEN);
-        buttonBar.setPadding(true);
-        buttonBar.setSpacing(true);
-        buttonBar.addClassName("kb-button-bar");
-        buttonBar.getStyle()
-            .set("padding", "2px var(--lumo-space-m)")
-        ;
-
-        createButton.setIcon(VaadinIcon.FILE_O.create());
-        createButton.addClickListener(e -> createNewArticle());
-        createButton.setVisible(false);
-
-        createCategoryButton.setIcon(VaadinIcon.FOLDER.create());
-        createCategoryButton.addClickListener(e -> openCreateCategoryDialog());
-        createCategoryButton.setVisible(false);
-
-        editButton.setIcon(VaadinIcon.FILE_O.create());
-        editButton.addClickListener(e -> enableEditMode());
-        editButton.setVisible(false);
-
-        editCategoryButton.setIcon(VaadinIcon.FOLDER.create());
-        editCategoryButton.addClickListener(e -> openEditCategoryDialog());
-        editCategoryButton.setVisible(false);
-
-        previewButton.setIcon(VaadinIcon.FILE_O.create());
-        previewButton.addClickListener(e -> togglePreview());
-        previewButton.setVisible(false);
-
-        saveButton.setIcon(VaadinIcon.FILE_O.create());
-        saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        saveButton.addClickListener(e -> saveArticle());
-        saveButton.setVisible(false);
-
-        cancelButton.setIcon(VaadinIcon.FILE_O.create());
-        cancelButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-        cancelButton.addClickListener(e -> cancelEdit());
-        cancelButton.setVisible(false);
-
-        deleteButton.setIcon(VaadinIcon.FILE_O.create());
-        deleteButton.addThemeVariants(ButtonVariant.LUMO_ERROR);
-        deleteButton.addClickListener(e -> deleteArticle());
-        deleteButton.setVisible(false);
-
-        deleteCategoryButton.setIcon(VaadinIcon.FOLDER.create());
-        deleteCategoryButton.addThemeVariants(ButtonVariant.LUMO_ERROR);
-        deleteCategoryButton.addClickListener(e -> deleteCategory());
-        deleteCategoryButton.setVisible(false);
-
-        exportButton.setIcon(VaadinIcon.DOWNLOAD_ALT.create());
-        Anchor exportLink = new Anchor(createExportHandler(), "");
-        exportLink.getElement().setAttribute("download", true);
-        exportLink.add(exportButton);
-
-        HorizontalLayout categoryButtons = new HorizontalLayout(createCategoryButton, editCategoryButton, deleteCategoryButton);
-        categoryButtons.setSpacing(true);
-        categoryButtons.setPadding(false);
-        categoryButtons.setMargin(false);
-
-        HorizontalLayout articleButtons = new HorizontalLayout(createButton, editButton, previewButton, saveButton, cancelButton, deleteButton, exportLink);
-        articleButtons.setSpacing(true);
-        articleButtons.setPadding(false);
-        articleButtons.setMargin(false);
-
-        buttonBar.add(categoryButtons, articleButtons);
-        return buttonBar;
-    }
-
     private DownloadHandler createExportHandler() {
         String exportFileName = LocalDate.now().format(EXPORT_DATE_FORMAT) + "-knowledge-base-export.zip";
         return DownloadHandler.fromInputStream(event -> {
@@ -391,20 +438,43 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
     private VerticalLayout createRightPanel() {
         VerticalLayout panel = new VerticalLayout();
-        panel.setId("");
+        panel.addClassName("kb-content");
         panel.setSizeFull();
-        panel.setPadding(true);
-        panel.setSpacing(true);
-//        panel.setMargin(false);
+        panel.setPadding(false);
+        panel.setSpacing(false);
 
+        panel.add(createContentHeader());
 
+        Div body = new Div();
+        body.addClassName("kb-article");
+        body.setWidthFull();
 
-        // Title display (read mode)
-        titleDisplay.getStyle().set("margin-top", "0");
+        // Read mode: article column with title, one-line metadata and wiki content
+        articleColumn.addClassName("kb-article-col");
+        titleDisplay.addClassName("article-title");
+        metadataDisplay.addClassName("kb-meta-row");
+        markdownPreview.setWidthFull();
+        markdownPreview.addClassName("wiki-content");
+        articleColumn.add(titleDisplay, metadataDisplay, markdownPreview);
+
+        buildEditor();
+
+        body.add(articleColumn, editorLayout);
+        panel.add(body);
+        panel.setFlexGrow(1, body);
+
+        return panel;
+    }
+
+    private void buildEditor() {
+        editorLayout.addClassName("kb-editor");
+        editorLayout.setPadding(false);
+        editorLayout.setSpacing(false);
+        editorLayout.setWidthFull();
+        editorLayout.setVisible(false);
 
         // Title field (edit mode)
         titleField.setWidthFull();
-        titleField.setVisible(false);
 
         // Category field (edit mode)
         categoryField.setWidthFull();
@@ -441,15 +511,18 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         });
         categoryField.setPlaceholder("Select a category (optional)");
         categoryField.setClearButtonVisible(true);
-        categoryField.setVisible(false);
 
         // Status field (edit mode)
         statusField.setWidthFull();
         statusField.setItems(ArticleStatus.DRAFT, ArticleStatus.PUBLISHED);
         statusField.setItemLabelGenerator(ArticleStatus::name);
-        statusField.setVisible(false);
 
-        // Content area (edit mode) - monospace font for Markdown editing
+        HorizontalLayout fieldRow = new HorizontalLayout(categoryField, statusField);
+        fieldRow.addClassName("kb-field-row");
+        fieldRow.setWidthFull();
+        fieldRow.setPadding(false);
+
+        // Content label row with markdown help toggle
         contentHeader.setWidthFull();
         contentHeader.setPadding(false);
         contentHeader.setSpacing(true);
@@ -462,22 +535,37 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         markdownHelpToggleButton.getElement().setAttribute("aria-label", "Markdown syntax help");
         markdownHelpToggleButton.addClickListener(event -> toggleMarkdownHelp());
         contentHeader.add(contentHeaderLabel, markdownHelpToggleButton);
-        contentHeader.setVisible(false);
 
+        // Content area (edit mode) - monospace font for Markdown editing
         contentArea.setLabel(null);
         contentArea.setAriaLabel("Content (Markdown)");
         contentArea.setWidthFull();
-        contentArea.setHeight("400px");
-        contentArea.setVisible(false);
+        contentArea.setValueChangeMode(ValueChangeMode.LAZY);
+        contentArea.addValueChangeListener(event -> {
+            if (editorPreviewPanel.isVisible()) {
+                editorPreview.setContent(event.getValue());
+            }
+        });
         contentArea.getStyle()
             .set("font-family", "monospace")
             .set("font-size", "0.9em")
             .set("line-height", "1.5");
 
+        // Side-by-side live preview panel (edit mode)
+        Span previewCaption = new Span("Preview");
+        previewCaption.addClassName("kb-preview-caption");
+        Div previewBody = new Div();
+        previewBody.addClassName("kb-preview-body");
+        editorPreview.addClassName("wiki-content");
+        previewBody.add(editorPreview);
+        editorPreviewPanel.addClassName("kb-preview-panel");
+        editorPreviewPanel.add(previewCaption, previewBody);
+        editorPreviewPanel.setVisible(false);
+
+        // Markdown help panel (edit mode, toggled by the info icon)
         markdownHelpPreview.setContent(loadMarkdownHelpContent());
         markdownHelpPreview.addClassName("wiki-content");
         markdownHelpPreview.addClassName("markdown-help-content");
-
         markdownHelpPanel.addClassName("markdown-help-panel");
         markdownHelpPanel.add(markdownHelpPreview);
         markdownHelpPanel.setVisible(false);
@@ -485,22 +573,13 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         contentEditorLayout.addClassName("content-editor-layout");
         contentEditorLayout.setWidthFull();
         contentEditorLayout.setPadding(false);
-        contentEditorLayout.setSpacing(true);
+        contentEditorLayout.setSpacing(false);
         contentEditorLayout.setMargin(false);
         contentEditorLayout.setAlignItems(Alignment.STRETCH);
-        contentEditorLayout.add(contentArea, markdownHelpPanel);
-        contentEditorLayout.setVisible(false);
+        contentEditorLayout.add(contentArea, editorPreviewPanel, markdownHelpPanel);
 
-        // Markdown preview (read mode)
-        markdownPreview.setWidthFull();
-        markdownPreview.addClassName("wiki-content");
-
-        panel.add(titleDisplay, titleField, categoryField, statusField, contentHeader, contentEditorLayout, markdownPreview);
-        metadataDisplay.addClassName("article-metadata");
-        panel.addComponentAtIndex(1, metadataDisplay);
-//        panel.setFlexGrow(1, markdownPreview);
-
-        return panel;
+        editorLayout.add(titleField, fieldRow, contentHeader, contentEditorLayout);
+        editorLayout.setFlexGrow(1, contentEditorLayout);
     }
 
     private void createNewArticle() {
@@ -514,6 +593,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         titleField.clear();
         contentArea.clear();
         markdownPreview.setContent("");
+        editorPreview.setContent("");
         titleDisplay.setText("");
     }
 
@@ -536,9 +616,8 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             return;
         }
         editMode = true;
-        previewMode = false;
-        previewButton.setText("Preview");
-        previewButton.setIcon(VaadinIcon.FILE_O.create());
+        previewMode = true;
+        markdownHelpVisible = false;
         updateUI();
     }
 
@@ -747,6 +826,10 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         cancelButton.setVisible(editMode);
         deleteButton.setVisible(hasId && !editMode && isAdmin);
         deleteCategoryButton.setVisible(hasCategory && !editMode && isAdmin);
+        if (exportLink != null) {
+            exportLink.setVisible(!editMode);
+        }
+        headerDivider.setVisible(!editMode && isAdmin && (hasArticle || hasCategory));
 
         articleTree.setEnabled(!editMode);
         menuSearch.setEnabled(!editMode);
@@ -754,18 +837,23 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         articleTree.setRowsDraggable(isAdmin && !editMode);
         articleTree.setDropMode(isAdmin && !editMode ? GridDropMode.BETWEEN : null);
 
+        // Sidebar is dimmed while editing
+        if (editMode) {
+            sidebar.addClassName("dimmed");
+        } else {
+            sidebar.removeClassName("dimmed");
+        }
+
         // Update content visibility
-        boolean showEditor = editMode && !previewMode;
-        titleDisplay.setVisible(!editMode || previewMode);
-        titleField.setVisible(showEditor);
-        categoryField.setVisible(showEditor);
-        statusField.setVisible(showEditor);
-        contentHeader.setVisible(showEditor);
-        contentArea.setVisible(showEditor);
-        contentEditorLayout.setVisible(showEditor);
-        markdownHelpPanel.setVisible(showEditor && markdownHelpVisible);
-        markdownPreview.setVisible(!editMode || previewMode);
+        articleColumn.setVisible(!editMode);
+        // The welcome markdown carries its own H1, so only show the title for real articles
+        titleDisplay.setVisible(!editMode && hasArticle);
+        markdownPreview.setVisible(!editMode);
+        editorLayout.setVisible(editMode);
+        editorPreviewPanel.setVisible(editMode && previewMode && !markdownHelpVisible);
+        markdownHelpPanel.setVisible(editMode && markdownHelpVisible);
         metadataDisplay.setVisible(!editMode && hasArticle);
+        updatePreviewButton();
 
         if (hasArticle) {
             // Update title and content for articles
@@ -774,9 +862,10 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
                 categoryField.setValue(currentArticle.getCategory());
                 statusField.setValue(currentArticle.getStatus() != null ? currentArticle.getStatus() : ArticleStatus.DRAFT);
                 contentArea.setValue(currentArticle.getContent() != null ? currentArticle.getContent() : "");
+                editorPreview.setContent(contentArea.getValue());
             } else {
                 titleDisplay.setText(currentArticle.getTitle() != null ? currentArticle.getTitle() : "");
-                renderMetadataTable(currentArticle);
+                renderMetaRow(currentArticle);
                 renderMarkdown(currentArticle.getContent());
             }
         } else if (!editMode) {
@@ -789,35 +878,69 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             metadataDisplay.getElement().setProperty("innerHTML", "");
             titleField.clear();
             contentArea.clear();
-            markdownPreview.setContent("");
+            editorPreview.setContent("");
+        }
+
+        updateCrumbs();
+    }
+
+    private void updateCrumbs() {
+        crumbs.removeAll();
+
+        String categoryLabel = null;
+        String currentLabel;
+        if (currentArticle != null) {
+            if (currentArticle.getCategory() != null && currentArticle.getCategory().getName() != null) {
+                categoryLabel = currentArticle.getCategory().getName();
+            }
+            String title = currentArticle.getTitle();
+            if (editMode && currentArticle.getId() == null) {
+                currentLabel = "New article";
+            } else {
+                currentLabel = title != null && !title.isBlank() ? title : "Untitled";
+            }
+        } else if (currentCategory != null && currentCategory.getName() != null) {
+            currentLabel = currentCategory.getName();
+        } else {
+            currentLabel = "Velkommen";
+        }
+
+        if (categoryLabel != null) {
+            Span category = new Span(categoryLabel);
+            Icon separator = VaadinIcon.ANGLE_RIGHT.create();
+            Span separatorWrapper = new Span(separator);
+            separatorWrapper.addClassName("kb-crumb-sep");
+            crumbs.add(category, separatorWrapper);
+        }
+
+        Span current = new Span(currentLabel);
+        current.addClassName("kb-crumb-current");
+        crumbs.add(current);
+
+        if (editMode) {
+            crumbs.add(editingBadge);
         }
     }
 
+    private void updatePreviewButton() {
+        boolean showingPreview = previewMode && !markdownHelpVisible;
+        previewButton.setText(showingPreview ? "Hide preview" : "Preview");
+    }
+
     private void togglePreview() {
-        previewMode = !previewMode;
-
-        if (previewMode) {
-            // Show preview - render current markdown from contentArea
-            titleDisplay.setText(titleField.getValue());
-            renderMarkdown(contentArea.getValue());
-            previewButton.setText("Edit");
-            previewButton.setIcon(VaadinIcon.FILE_O.create());
+        if (markdownHelpVisible) {
+            // Switch from help panel back to preview
+            markdownHelpVisible = false;
+            previewMode = true;
         } else {
-            // Back to edit mode
-            previewButton.setText("Preview");
-            previewButton.setIcon(VaadinIcon.FILE_O.create());
+            previewMode = !previewMode;
         }
-
-        // Toggle visibility
-        titleField.setVisible(!previewMode);
-        categoryField.setVisible(!previewMode);
-        statusField.setVisible(!previewMode);
-        contentArea.setVisible(!previewMode);
-        contentHeader.setVisible(!previewMode);
-        contentEditorLayout.setVisible(!previewMode);
-        markdownHelpPanel.setVisible(!previewMode && markdownHelpVisible);
-        titleDisplay.setVisible(previewMode);
-        markdownPreview.setVisible(previewMode);
+        if (previewMode) {
+            editorPreview.setContent(contentArea.getValue());
+        }
+        editorPreviewPanel.setVisible(editMode && previewMode && !markdownHelpVisible);
+        markdownHelpPanel.setVisible(editMode && markdownHelpVisible);
+        updatePreviewButton();
     }
 
     private void toggleMarkdownHelp() {
@@ -825,9 +948,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         if (markdownHelpVisible) {
             markdownHelpPreview.setContent(loadMarkdownHelpContent());
         }
-        if (editMode && !previewMode) {
+        if (editMode) {
+            editorPreviewPanel.setVisible(previewMode && !markdownHelpVisible);
             markdownHelpPanel.setVisible(markdownHelpVisible);
         }
+        updatePreviewButton();
     }
 
     private String loadMarkdownHelpContent() {
@@ -890,6 +1015,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         menuColumn.setSortable(false);
         menuColumn.setResizable(false);
         menuSearch.setPrefixComponent(VaadinIcon.SEARCH.create());
+        menuSearch.setPlaceholder("Search articles…");
         menuSearch.setClearButtonVisible(true);
         menuSearch.setWidthFull();
         menuSearch.setItemLabelGenerator(WikiType::label);
@@ -945,14 +1071,6 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         toggleCategoriesButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE, ButtonVariant.LUMO_SMALL);
         toggleCategoriesButton.addClickListener(event -> toggleAllCategories());
 
-        VerticalLayout menuHeader = new VerticalLayout(menuSearch, toggleCategoriesButton);
-        menuHeader.setPadding(false);
-        menuHeader.setSpacing(false);
-        menuHeader.setMargin(false);
-        menuHeader.setAlignItems(FlexComponent.Alignment.START);
-        menuHeader.setWidthFull();
-        menuHeader.getStyle().set("gap", "var(--lumo-space-xs)");
-        menuColumn.setHeader(menuHeader);
         menuColumn.setRenderer(new ComponentRenderer<>(node -> {
                 HorizontalLayout itemLayout = new HorizontalLayout();
                 itemLayout.setSpacing(true);
@@ -1165,8 +1283,8 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         int start = Math.max(0, idx - 40);
         int end = Math.min(plain.length(), idx + query.length() + 40);
         String snippet = plain.substring(start, end);
-        if (start > 0) snippet = "\u2026" + snippet;
-        if (end < plain.length()) snippet = snippet + "\u2026";
+        if (start > 0) snippet = "…" + snippet;
+        if (end < plain.length()) snippet = snippet + "…";
         return snippet;
     }
 
@@ -1227,10 +1345,9 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         }
     }
 
-    private void renderMetadataTable(Article article) {
-        String createdBy = formatUserDisplay(article.getCreatedBy());
+    private void renderMetaRow(Article article) {
         String createdAt = article.getCreatedAt() != null
-            ? article.getCreatedAt().format(METADATA_DATE_FORMAT)
+            ? article.getCreatedAt().format(EXPORT_DATE_FORMAT)
             : "Unknown";
         String updatedBy = formatUserDisplay(article.getUpdatedBy());
         String updatedAt = article.getUpdatedAt() != null
@@ -1242,21 +1359,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             : "status-badge status-badge-neutral";
         String statusLabel = status == ArticleStatus.PUBLISHED ? "Published" : "Draft";
 
-        String html = "<div class=\"article-metadata-strip\">"
-            + "<div class=\"metadata-status-row\"><span class=\"" + statusBadgeClass + "\">" + escapeHtml(statusLabel) + "</span></div>"
-            + "<div class=\"metadata-grid-row\">"
-            + "<div class=\"metadata-grid-cell metadata-grid-label\">Created by</div>"
-            + "<div class=\"metadata-grid-cell metadata-grid-value\">" + escapeHtml(createdBy) + "</div>"
-            + "<div class=\"metadata-grid-cell metadata-grid-label\">Created date</div>"
-            + "<div class=\"metadata-grid-cell metadata-grid-value\">" + escapeHtml(createdAt) + "</div>"
-            + "</div>"
-            + "<div class=\"metadata-grid-row\">"
-            + "<div class=\"metadata-grid-cell metadata-grid-label\">Modified by</div>"
-            + "<div class=\"metadata-grid-cell metadata-grid-value\">" + escapeHtml(updatedBy) + "</div>"
-            + "<div class=\"metadata-grid-cell metadata-grid-label\">Modified date</div>"
-            + "<div class=\"metadata-grid-cell metadata-grid-value\">" + escapeHtml(updatedAt) + "</div>"
-            + "</div>"
-            + "</div>";
+        String html = "<span class=\"" + statusBadgeClass + "\">" + escapeHtml(statusLabel) + "</span>"
+            + "<span class=\"kb-meta-dot\">·</span>"
+            + "<span>Updated " + escapeHtml(updatedAt) + " by " + escapeHtml(updatedBy) + "</span>"
+            + "<span class=\"kb-meta-dot\">·</span>"
+            + "<span>Created " + escapeHtml(createdAt) + "</span>";
         metadataDisplay.getElement().setProperty("innerHTML", html);
     }
 
