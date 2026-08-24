@@ -30,17 +30,19 @@ import io.avec.knowledgebase.data.ArticleStatus;
 import io.avec.knowledgebase.data.Category;
 import io.avec.knowledgebase.service.ArticleService;
 import io.avec.knowledgebase.service.CategoryService;
+import io.avec.knowledgebase.service.KnowledgeBaseExportService;
 import io.avec.security.AuthenticatedUser;
 import io.avec.views.MainLayout;
 import jakarta.annotation.security.PermitAll;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.vaadin.lineawesome.LineAwesomeIconUrl;
 import com.vaadin.flow.component.markdown.Markdown;
-import com.vaadin.flow.server.StreamResource;
+import com.vaadin.flow.server.streams.DownloadHandler;
+import com.vaadin.flow.server.streams.DownloadResponse;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -54,9 +56,6 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.function.Consumer;
 
-import java.util.Optional;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 @PageTitle("KnowledgeBase")
 @Route(value = "knowledge", layout = MainLayout.class)
@@ -64,8 +63,11 @@ import java.util.zip.ZipOutputStream;
 @PermitAll
 public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter<String> {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(KnowledgeBaseView.class);
+
     private final ArticleService articleService;
     private final CategoryService categoryService;
+    private final KnowledgeBaseExportService exportService;
     private final AuthenticatedUser authenticatedUser;
 
     private final TreeGrid<WikiType> articleTree = new TreeGrid<>();
@@ -114,9 +116,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private static final DateTimeFormatter EXPORT_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private boolean markdownHelpVisible = false;
 
-    public KnowledgeBaseView(ArticleService articleService, CategoryService categoryService, AuthenticatedUser authenticatedUser) {
+    public KnowledgeBaseView(ArticleService articleService, CategoryService categoryService,
+                             KnowledgeBaseExportService exportService, AuthenticatedUser authenticatedUser) {
         this.articleService = articleService;
         this.categoryService = categoryService;
+        this.exportService = exportService;
         this.authenticatedUser = authenticatedUser;
 
         checkAdminRole();
@@ -125,10 +129,8 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         setPadding(false);
         setSpacing(false);
 
-        if(isAdmin) {
-            HorizontalLayout buttonBarLayout = createButtonBarLayout();
-            add(buttonBarLayout);
-        }
+        HorizontalLayout buttonBarLayout = createButtonBarLayout();
+        add(buttonBarLayout);
         HorizontalLayout mainLayout = createMainLayout();
         add(mainLayout);
 
@@ -337,7 +339,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         deleteCategoryButton.setVisible(false);
 
         exportButton.setIcon(VaadinIcon.DOWNLOAD_ALT.create());
-        Anchor exportLink = new Anchor(createExportResource(), "");
+        Anchor exportLink = new Anchor(createExportHandler(), "");
         exportLink.getElement().setAttribute("download", true);
         exportLink.add(exportButton);
 
@@ -355,102 +357,18 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         return buttonBar;
     }
 
-    private StreamResource createExportResource() {
+    private DownloadHandler createExportHandler() {
         String exportFileName = LocalDate.now().format(EXPORT_DATE_FORMAT) + "-knowledge-base-export.zip";
-        return new StreamResource(exportFileName, () -> {
+        return DownloadHandler.fromInputStream(event -> {
             try {
-                return new ByteArrayInputStream(generateExportZipBytes());
-            } catch (IOException e) {
-                return new ByteArrayInputStream(new byte[0]);
+                byte[] content = exportService.generateExportZipBytes();
+                return new DownloadResponse(
+                    new ByteArrayInputStream(content), exportFileName, "application/zip", content.length);
+            } catch (Exception e) {
+                LOGGER.error("Could not generate knowledge base export", e);
+                return DownloadResponse.error(500, "Could not generate knowledge base export", e);
             }
         });
-    }
-
-    private byte[] generateExportZipBytes() throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (ZipOutputStream zip = new ZipOutputStream(baos, StandardCharsets.UTF_8)) {
-            addWelcomeEntry(zip);
-
-            List<Category> rootCategories = categoryService.findRootCategories();
-            for (Category category : rootCategories) {
-                addCategoryEntries(zip, category);
-            }
-
-            addUncategorizedEntries(zip);
-        }
-        return baos.toByteArray();
-    }
-
-    private void addWelcomeEntry(ZipOutputStream zip) throws IOException {
-        InputStream is = getClass().getClassLoader().getResourceAsStream("knowledge/welcome-to-knowledge.md");
-        String content = "";
-        if (is != null) {
-            content = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
-                .lines()
-                .collect(Collectors.joining("\n"));
-        }
-        writeZipEntry(zip, "welcome.md", content);
-    }
-
-    private void addCategoryEntries(ZipOutputStream zip, Category category) throws IOException {
-        String categoryFolder = sanitizePathSegment(category.getName());
-        if (categoryFolder.isBlank()) {
-            categoryFolder = "category-" + category.getId();
-        }
-        ensureDirectoryEntry(zip, categoryFolder + "/");
-
-        List<Article> articles = isAdmin
-            ? articleService.findByCategory(category)
-            : articleService.findByCategoryAndPublished(category);
-
-        for (Article article : articles) {
-            String fileName = buildArticleFileName(article);
-            writeZipEntry(zip, categoryFolder + "/" + fileName, article.getContent());
-        }
-    }
-
-    private void addUncategorizedEntries(ZipOutputStream zip) throws IOException {
-        List<Article> uncategorized = articleService.findVisibleUncategorized();
-        for (Article article : uncategorized) {
-            String fileName = buildArticleFileName(article);
-            writeZipEntry(zip, fileName, article.getContent());
-        }
-    }
-
-    private String buildArticleFileName(Article article) {
-        String baseName = article.getSlug();
-        if (baseName == null || baseName.isBlank()) {
-            baseName = sanitizePathSegment(article.getTitle());
-        }
-        if (baseName == null || baseName.isBlank()) {
-            baseName = "article-" + article.getId();
-        }
-        return sanitizePathSegment(baseName) + ".md";
-    }
-
-    private void writeZipEntry(ZipOutputStream zip, String path, String content) throws IOException {
-        ZipEntry entry = new ZipEntry(path);
-        zip.putNextEntry(entry);
-        byte[] bytes = (content != null ? content : "").getBytes(StandardCharsets.UTF_8);
-        zip.write(bytes);
-        zip.closeEntry();
-    }
-
-    private void ensureDirectoryEntry(ZipOutputStream zip, String path) throws IOException {
-        ZipEntry entry = new ZipEntry(path);
-        zip.putNextEntry(entry);
-        zip.closeEntry();
-    }
-
-    private String sanitizePathSegment(String input) {
-        if (input == null) {
-            return "";
-        }
-        return input
-            .trim()
-            .replaceAll("[\\\\/:*?\"<>|]", "-")
-            .replaceAll("\\s+", " ")
-            .replaceAll("^\\.+|\\.+$", "");
     }
 
     private void refreshCategoryFieldItems() {

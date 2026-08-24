@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import io.avec.knowledgebase.data.Article;
 import io.avec.knowledgebase.data.ArticleRepository;
 import io.avec.knowledgebase.data.ArticleStatus;
+import io.avec.knowledgebase.data.Category;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
@@ -66,6 +67,28 @@ class ArticleServiceVisibilityTest {
         when(articleRepository.findByCategoryIsNullOrderBySortOrder()).thenReturn(List.of(draft, published));
 
         assertThat(articleService.findVisibleUncategorized()).containsExactly(draft, published);
+    }
+
+    @Test
+    void userGetsOnlyPublishedArticlesInCategory() {
+        Category category = new Category();
+        Article published = article("published", ArticleStatus.PUBLISHED);
+        authenticate("ROLE_USER");
+        when(articleRepository.findByCategoryAndStatusOrderBySortOrder(category, ArticleStatus.PUBLISHED))
+            .thenReturn(List.of(published));
+
+        assertThat(articleService.findVisibleByCategory(category)).containsExactly(published);
+    }
+
+    @Test
+    void adminGetsAllArticlesInCategory() {
+        Category category = new Category();
+        Article draft = article("draft", ArticleStatus.DRAFT);
+        Article published = article("published", ArticleStatus.PUBLISHED);
+        authenticate("ROLE_ADMIN");
+        when(articleRepository.findByCategoryOrderBySortOrder(category)).thenReturn(List.of(draft, published));
+
+        assertThat(articleService.findVisibleByCategory(category)).containsExactly(draft, published);
     }
 
     private void authenticate(String authority) {

@@ -42,6 +42,12 @@ public class ArticleService {
         return articleRepository.findByCategoryAndStatusOrderBySortOrder(category, ArticleStatus.PUBLISHED);
     }
 
+    public List<Article> findVisibleByCategory(Category category) {
+        return canViewDrafts()
+            ? articleRepository.findByCategoryOrderBySortOrder(category)
+            : articleRepository.findByCategoryAndStatusOrderBySortOrder(category, ArticleStatus.PUBLISHED);
+    }
+
     @PreAuthorize("hasRole('ADMIN')")
     public List<Article> findUncategorized() {
         return articleRepository.findByCategoryIsNullOrderBySortOrder();
