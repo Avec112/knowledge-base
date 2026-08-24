@@ -114,6 +114,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final Button deleteButton = new Button("Delete");
     private final Button deleteCategoryButton = new Button("Delete category");
     private final Button exportButton = new Button("Export");
+    private final Button copyLinkButton = new Button();
 
     private final VerticalLayout sidebar = new VerticalLayout();
     private final VerticalLayout editorLayout = new VerticalLayout();
@@ -323,6 +324,13 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         deleteCategoryButton.addClickListener(e -> deleteCategory());
         deleteCategoryButton.setVisible(false);
 
+        copyLinkButton.setIcon(VaadinIcon.LINK.create());
+        copyLinkButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+        copyLinkButton.getElement().setProperty("title", "Copy link");
+        copyLinkButton.getElement().setAttribute("aria-label", "Copy link");
+        copyLinkButton.addClickListener(e -> copyArticleLink());
+        copyLinkButton.setVisible(false);
+
         previewButton.setIcon(VaadinIcon.EYE.create());
         previewButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
         previewButton.addClickListener(e -> togglePreview());
@@ -345,7 +353,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         exportLink.getElement().setAttribute("download", true);
         exportLink.add(exportButton);
 
-        actions.add(editCategoryButton, deleteCategoryButton, editButton, deleteButton,
+        actions.add(editCategoryButton, deleteCategoryButton, editButton, deleteButton, copyLinkButton,
             headerDivider, exportLink, previewButton, cancelButton, saveButton);
 
         header.add(crumbs, actions);
@@ -711,6 +719,16 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         dialog.open();
     }
 
+    private void copyArticleLink() {
+        if (currentArticle == null || currentArticle.getSlug() == null) {
+            return;
+        }
+        getElement().executeJs(
+            "return navigator.clipboard.writeText(window.location.origin + '/knowledge/' + $0)",
+            currentArticle.getSlug()
+        ).then(result -> Notification.show("Lenke kopiert"));
+    }
+
     private void performArticleDelete(Article article) {
         try {
             articleService.delete(article);
@@ -876,6 +894,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         cancelButton.setVisible(editMode);
         deleteButton.setVisible(hasId && !hasCategory && !editMode && isAdmin);
         deleteCategoryButton.setVisible(hasCategory && !editMode && isAdmin);
+        copyLinkButton.setVisible(hasArticle && !editMode);
         if (exportLink != null) {
             exportLink.setVisible(isAdmin && !editMode);
         }
