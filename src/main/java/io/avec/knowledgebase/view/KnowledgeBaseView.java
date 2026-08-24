@@ -115,6 +115,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final Button deleteCategoryButton = new Button("Delete category");
     private final Button exportButton = new Button("Export");
     private final Button copyLinkButton = new Button();
+    private final Button downloadArticleButton = new Button();
 
     private final VerticalLayout sidebar = new VerticalLayout();
     private final VerticalLayout editorLayout = new VerticalLayout();
@@ -123,6 +124,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final Span editingBadge = new Span("Editing");
     private final Span headerDivider = new Span();
     private Anchor exportLink;
+    private Anchor downloadArticleLink;
 
     private Article currentArticle;
     private Category currentCategory;
@@ -331,6 +333,15 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         copyLinkButton.addClickListener(e -> copyArticleLink());
         copyLinkButton.setVisible(false);
 
+        downloadArticleButton.setIcon(VaadinIcon.DOWNLOAD.create());
+        downloadArticleButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+        downloadArticleButton.getElement().setProperty("title", "Download as Markdown");
+        downloadArticleButton.getElement().setAttribute("aria-label", "Download as Markdown");
+        downloadArticleLink = new Anchor(createArticleDownloadHandler(), "");
+        downloadArticleLink.getElement().setAttribute("download", true);
+        downloadArticleLink.add(downloadArticleButton);
+        downloadArticleLink.setVisible(false);
+
         previewButton.setIcon(VaadinIcon.EYE.create());
         previewButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
         previewButton.addClickListener(e -> togglePreview());
@@ -354,7 +365,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         exportLink.add(exportButton);
 
         actions.add(editCategoryButton, deleteCategoryButton, editButton, deleteButton, copyLinkButton,
-            headerDivider, exportLink, previewButton, cancelButton, saveButton);
+            downloadArticleLink, headerDivider, exportLink, previewButton, cancelButton, saveButton);
 
         header.add(crumbs, actions);
         return header;
@@ -440,6 +451,20 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
                 LOGGER.error("Could not generate knowledge base export", e);
                 return DownloadResponse.error(500, "Could not generate knowledge base export", e);
             }
+        });
+    }
+
+    private DownloadHandler createArticleDownloadHandler() {
+        return DownloadHandler.fromInputStream(event -> {
+            Article article = currentArticle;
+            if (article == null || article.getSlug() == null) {
+                return DownloadResponse.error(404, "No article selected");
+            }
+            String markdown = article.getContent() != null ? article.getContent() : "";
+            byte[] content = markdown.getBytes(StandardCharsets.UTF_8);
+            String fileName = article.getSlug() + ".md";
+            return new DownloadResponse(
+                new ByteArrayInputStream(content), fileName, "text/markdown", content.length);
         });
     }
 
@@ -895,6 +920,9 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         deleteButton.setVisible(hasId && !hasCategory && !editMode && isAdmin);
         deleteCategoryButton.setVisible(hasCategory && !editMode && isAdmin);
         copyLinkButton.setVisible(hasArticle && !editMode);
+        if (downloadArticleLink != null) {
+            downloadArticleLink.setVisible(hasArticle && !editMode);
+        }
         if (exportLink != null) {
             exportLink.setVisible(isAdmin && !editMode);
         }
