@@ -15,6 +15,7 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.splitlayout.SplitLayout;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.treegrid.TreeGrid;
@@ -49,6 +50,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
@@ -79,7 +81,8 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final TextArea contentArea = new TextArea();
     private final HorizontalLayout contentHeader = new HorizontalLayout();
     private final Button markdownHelpToggleButton = new Button(VaadinIcon.INFO_CIRCLE_O.create());
-    private final HorizontalLayout contentEditorLayout = new HorizontalLayout();
+    private final SplitLayout contentEditorLayout = new SplitLayout();
+    private final Div editorSecondaryPanel = new Div();
     private final Markdown markdownHelpPreview = new Markdown("");
     private final Markdown markdownPreview = new Markdown("");
     private final Markdown editorPreview = new Markdown("");
@@ -95,6 +98,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final List<WikiType> categoryNodes = new ArrayList<>();
     private WikiType welcomeNode;
     private WikiType draggedNode;
+    private WikiType lastSelectedNode;
 
     private final Button createButton = new Button("New article");
     private final Button createCategoryButton = new Button("New category");
@@ -302,12 +306,12 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         deleteButton.addClickListener(e -> deleteArticle());
         deleteButton.setVisible(false);
 
-        editCategoryButton.setIcon(VaadinIcon.FOLDER_O.create());
+        editCategoryButton.setIcon(VaadinIcon.PENCIL.create());
         editCategoryButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
         editCategoryButton.addClickListener(e -> openEditCategoryDialog());
         editCategoryButton.setVisible(false);
 
-        deleteCategoryButton.setIcon(VaadinIcon.FOLDER_O.create());
+        deleteCategoryButton.setIcon(VaadinIcon.TRASH.create());
         deleteCategoryButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
         deleteCategoryButton.addClickListener(e -> deleteCategory());
         deleteCategoryButton.setVisible(false);
@@ -572,11 +576,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
         contentEditorLayout.addClassName("content-editor-layout");
         contentEditorLayout.setWidthFull();
-        contentEditorLayout.setPadding(false);
-        contentEditorLayout.setSpacing(false);
-        contentEditorLayout.setMargin(false);
-        contentEditorLayout.setAlignItems(Alignment.STRETCH);
-        contentEditorLayout.add(contentArea, editorPreviewPanel, markdownHelpPanel);
+        contentEditorLayout.setSplitterPosition(60);
+        editorSecondaryPanel.addClassName("kb-editor-secondary");
+        editorSecondaryPanel.add(editorPreviewPanel, markdownHelpPanel);
+        contentEditorLayout.addToPrimary(contentArea);
+        contentEditorLayout.addToSecondary(editorSecondaryPanel);
 
         editorLayout.add(titleField, fieldRow, contentHeader, contentEditorLayout);
         editorLayout.setFlexGrow(1, contentEditorLayout);
@@ -667,11 +671,29 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             return;
         }
 
-        articleService.delete(currentArticle);
-        currentArticle = null;
-        refreshArticleList();
-        getUI().ifPresent(ui -> ui.navigate("knowledge/" + WELCOME_SLUG));
-        Notification.show("Article deleted");
+        Article article = currentArticle;
+        String title = article.getTitle() != null && !article.getTitle().isBlank() ? article.getTitle() : "Untitled";
+        ConfirmDialog dialog = new ConfirmDialog();
+        dialog.setHeader("Er du sikker?");
+        dialog.setText("Slett artikkelen \"" + title + "\"?");
+        dialog.setCancelable(true);
+        dialog.setCancelText("Avbryt");
+        dialog.setConfirmText("Slett");
+        dialog.setConfirmButtonTheme("error primary");
+        dialog.addConfirmListener(event -> performArticleDelete(article));
+        dialog.open();
+    }
+
+    private void performArticleDelete(Article article) {
+        try {
+            articleService.delete(article);
+            currentArticle = null;
+            refreshArticleList();
+            getUI().ifPresent(ui -> ui.navigate("knowledge/" + WELCOME_SLUG));
+            Notification.show("Article deleted");
+        } catch (Exception ex) {
+            Notification.show("Error deleting article: " + ex.getMessage());
+        }
     }
 
     @Override
@@ -790,10 +812,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
         Category category = currentCategory;
         ConfirmDialog dialog = new ConfirmDialog();
-        dialog.setHeader("Delete category?");
-        dialog.setText("Delete category \"" + category.getName() + "\"?");
+        dialog.setHeader("Er du sikker?");
+        dialog.setText("Slett kategorien \"" + category.getName() + "\"?");
         dialog.setCancelable(true);
-        dialog.setConfirmText("Delete");
+        dialog.setCancelText("Avbryt");
+        dialog.setConfirmText("Slett");
         dialog.setConfirmButtonTheme("error primary");
         dialog.addConfirmListener(event -> performCategoryDelete(category));
         dialog.open();
@@ -819,15 +842,15 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         // Update button visibility
         createButton.setVisible(isAdmin && !editMode);
         createCategoryButton.setVisible(isAdmin && !editMode);
-        editButton.setVisible(hasArticle && !editMode && isAdmin);
+        editButton.setVisible(hasArticle && !hasCategory && !editMode && isAdmin);
         editCategoryButton.setVisible(hasCategory && !editMode && isAdmin);
         previewButton.setVisible(editMode);
         saveButton.setVisible(editMode);
         cancelButton.setVisible(editMode);
-        deleteButton.setVisible(hasId && !editMode && isAdmin);
+        deleteButton.setVisible(hasId && !hasCategory && !editMode && isAdmin);
         deleteCategoryButton.setVisible(hasCategory && !editMode && isAdmin);
         if (exportLink != null) {
-            exportLink.setVisible(!editMode);
+            exportLink.setVisible(isAdmin && !editMode);
         }
         headerDivider.setVisible(!editMode && isAdmin && (hasArticle || hasCategory));
 
@@ -852,6 +875,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         editorLayout.setVisible(editMode);
         editorPreviewPanel.setVisible(editMode && previewMode && !markdownHelpVisible);
         markdownHelpPanel.setVisible(editMode && markdownHelpVisible);
+        syncEditorSecondary();
         metadataDisplay.setVisible(!editMode && hasArticle);
         updatePreviewButton();
 
@@ -940,7 +964,18 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         }
         editorPreviewPanel.setVisible(editMode && previewMode && !markdownHelpVisible);
         markdownHelpPanel.setVisible(editMode && markdownHelpVisible);
+        syncEditorSecondary();
         updatePreviewButton();
+    }
+
+    private void syncEditorSecondary() {
+        boolean secondaryVisible = editorPreviewPanel.isVisible() || markdownHelpPanel.isVisible();
+        editorSecondaryPanel.setVisible(secondaryVisible);
+        if (secondaryVisible) {
+            contentEditorLayout.removeClassName("kb-editor-split-solo");
+        } else {
+            contentEditorLayout.addClassName("kb-editor-split-solo");
+        }
     }
 
     private void toggleMarkdownHelp() {
@@ -951,6 +986,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         if (editMode) {
             editorPreviewPanel.setVisible(previewMode && !markdownHelpVisible);
             markdownHelpPanel.setVisible(markdownHelpVisible);
+            syncEditorSecondary();
         }
         updatePreviewButton();
     }
@@ -1116,40 +1152,55 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         articleTree.addExpandListener(event -> updateCategoryToggleButton());
         articleTree.addCollapseListener(event -> articleTree.getDataProvider().refreshAll());
         articleTree.addCollapseListener(event -> updateCategoryToggleButton());
+        // Expansion is toggled from the selection listener rather than an item-click
+        // listener: the selection round trip re-keys the tree rows, which makes the
+        // accompanying item-click unresolvable on the server and silently dropped.
         articleTree.addSelectionListener(event -> {
-            event.getFirstSelectedItem().ifPresent(node -> {
-                if (node.type() == WikiNodeType.WELCOME) {
-                    currentCategory = null;
-                    if (currentArticle == null) {
-                        return;
-                    }
-                    getUI().ifPresent(ui -> ui.navigate("knowledge/" + WELCOME_SLUG));
-                } else if (node.type() == WikiNodeType.ARTICLE && node.article() != null) {
-                    currentCategory = null;
-                    if (currentArticle != null && currentArticle.getId() != null
-                        && currentArticle.getId().equals(node.article().getId())) {
-                        return;
-                    }
-                    showArticle(node.article());
-                } else if (node.type() == WikiNodeType.CATEGORY || node.type() == WikiNodeType.SECTION) {
-                    currentCategory = node.category();
-                    updateUI();
-                }
-            });
-        });
-        articleTree.addItemClickListener(event -> {
-            WikiType node = event.getItem();
+            WikiType node = event.getFirstSelectedItem().orElse(null);
+            boolean fromClient = event.isFromClient();
             if (node == null) {
+                // Clicking the selected row deselects it; treat that as a toggle too
+                if (fromClient && lastSelectedNode != null
+                    && (lastSelectedNode.type() == WikiNodeType.CATEGORY || lastSelectedNode.type() == WikiNodeType.SECTION)) {
+                    toggleExpansion(lastSelectedNode);
+                }
+                lastSelectedNode = null;
                 return;
             }
-            if (node.type() == WikiNodeType.CATEGORY || node.type() == WikiNodeType.SECTION) {
-                if (articleTree.isExpanded(node)) {
-                    articleTree.collapse(node);
-                } else {
-                    articleTree.expand(node);
+            lastSelectedNode = node;
+            if (node.type() == WikiNodeType.WELCOME) {
+                currentCategory = null;
+                if (currentArticle == null) {
+                    // Already showing welcome; refresh so stale category actions disappear
+                    updateUI();
+                    return;
                 }
+                getUI().ifPresent(ui -> ui.navigate("knowledge/" + WELCOME_SLUG));
+            } else if (node.type() == WikiNodeType.ARTICLE && node.article() != null) {
+                currentCategory = null;
+                if (currentArticle != null && currentArticle.getId() != null
+                    && currentArticle.getId().equals(node.article().getId())) {
+                    // Already showing this article; refresh so stale category actions disappear
+                    updateUI();
+                    return;
+                }
+                showArticle(node.article());
+            } else if (node.type() == WikiNodeType.CATEGORY || node.type() == WikiNodeType.SECTION) {
+                currentCategory = node.category();
+                if (fromClient) {
+                    toggleExpansion(node);
+                }
+                updateUI();
             }
         });
+    }
+
+    private void toggleExpansion(WikiType node) {
+        if (articleTree.isExpanded(node)) {
+            articleTree.collapse(node);
+        } else {
+            articleTree.expand(node);
+        }
     }
 
     private void configureCategoryDragAndDrop() {
@@ -1346,13 +1397,6 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     }
 
     private void renderMetaRow(Article article) {
-        String createdAt = article.getCreatedAt() != null
-            ? article.getCreatedAt().format(EXPORT_DATE_FORMAT)
-            : "Unknown";
-        String updatedBy = formatUserDisplay(article.getUpdatedBy());
-        String updatedAt = article.getUpdatedAt() != null
-            ? article.getUpdatedAt().format(METADATA_DATE_FORMAT)
-            : "Unknown";
         ArticleStatus status = article.getStatus() != null ? article.getStatus() : ArticleStatus.DRAFT;
         String statusBadgeClass = status == ArticleStatus.PUBLISHED
             ? "status-badge status-badge-success"
@@ -1361,10 +1405,23 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
         String html = "<span class=\"" + statusBadgeClass + "\">" + escapeHtml(statusLabel) + "</span>"
             + "<span class=\"kb-meta-dot\">·</span>"
-            + "<span>Updated " + escapeHtml(updatedAt) + " by " + escapeHtml(updatedBy) + "</span>"
+            + metaSegment("Created", article.getCreatedAt(), article.getCreatedBy())
             + "<span class=\"kb-meta-dot\">·</span>"
-            + "<span>Created " + escapeHtml(createdAt) + "</span>";
+            + metaSegment("Updated", article.getUpdatedAt(), article.getUpdatedBy());
         metadataDisplay.getElement().setProperty("innerHTML", html);
+    }
+
+    private String metaSegment(String label, LocalDateTime timestamp, io.avec.data.User user) {
+        String when = timestamp != null ? timestamp.format(METADATA_DATE_FORMAT) : "Unknown";
+        StringBuilder segment = new StringBuilder();
+        segment.append("<span><span class=\"kb-meta-label\">").append(escapeHtml(label)).append("</span> ")
+            .append(escapeHtml(when));
+        if (user != null) {
+            segment.append(" by <span class=\"kb-meta-name\">")
+                .append(escapeHtml(formatUserDisplay(user))).append("</span>");
+        }
+        segment.append("</span>");
+        return segment.toString();
     }
 
     private String formatUserDisplay(io.avec.data.User user) {

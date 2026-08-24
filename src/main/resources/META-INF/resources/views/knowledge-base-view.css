@@ -150,6 +150,15 @@
   color: var(--lumo-contrast-30pct);
 }
 
+.knowledge-base-view .kb-meta-label {
+  font-weight: 600;
+}
+
+.knowledge-base-view .kb-meta-name {
+  color: var(--lumo-body-text-color);
+  font-weight: 500;
+}
+
 .knowledge-base-view .status-badge {
   display: inline-block;
   border-radius: 999px;
@@ -310,22 +319,41 @@
 }
 
 .knowledge-base-view .content-editor-layout {
-  align-items: stretch;
-  gap: var(--lumo-space-s);
   flex-basis: 0;
   min-height: 0;
+  background: transparent;
 }
 
-.knowledge-base-view .content-editor-layout > vaadin-text-area {
-  flex: 3 1 0;
-  min-width: 0;
+.knowledge-base-view .content-editor-layout vaadin-text-area {
+  box-sizing: border-box;
+  height: 100%;
   min-height: 300px;
+  min-width: 0;
+}
+
+.knowledge-base-view .kb-editor-secondary {
+  box-sizing: border-box;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-left: var(--lumo-space-s);
+}
+
+/* Editor without a preview/help pane: hide the splitter and let the text area fill */
+.knowledge-base-view .kb-editor-split-solo::part(splitter) {
+  display: none;
+}
+
+.knowledge-base-view .kb-editor-split-solo > vaadin-text-area {
+  flex: 1 1 100% !important;
 }
 
 .knowledge-base-view .kb-preview-panel,
 .knowledge-base-view .markdown-help-panel {
   box-sizing: border-box;
-  flex: 2 1 0;
+  flex: 1 1 auto;
+  min-height: 0;
   width: auto;
   min-width: 0;
   display: flex;
@@ -370,18 +398,4 @@
   background: transparent;
   box-shadow: none;
   max-width: none;
-}
-
-@media (max-width: 700px) {
-  .knowledge-base-view .content-editor-layout {
-    flex-direction: column;
-  }
-
-  .knowledge-base-view .content-editor-layout > vaadin-text-area,
-  .knowledge-base-view .kb-preview-panel,
-  .knowledge-base-view .markdown-help-panel {
-    flex: 0 1 auto;
-    width: 100%;
-    max-height: 50vh;
-  }
 }
