@@ -21,15 +21,19 @@ For more information on installing in various IDEs, see [how to import Vaadin pr
 
 If you install the Vaadin plugin for IntelliJ, you should instead launch the `Application` class using "Debug using HotswapAgent" to see updates in the Java code immediately reflected in the browser.
 
+The default profile does not create users or seed knowledge-base content. To run the H2-backed demonstration with sample content and users, activate the explicit `demo` profile:
+
+```
+mvn spring-boot:run -Dspring-boot.run.profiles=demo
+```
+
 ## Deploying to Production
 
-The project is a standard Maven project. To create a production build, call 
+The project is a standard Maven project. To create a build, call
 
 ```
-./mvnw clean package -Pproduction
+mvn clean package
 ```
-
-If you have Maven globally installed, you can replace `./mvnw` with `mvn`.
 
 This will build a JAR file with all the dependencies and front-end resources,ready to be run. The file can be found in the `target` folder after the build completes.
 You then launch the application using 
@@ -39,8 +43,8 @@ java -jar target/knowledge-base-1.0-SNAPSHOT.jar
 
 ## Technology Stack
 
-- **Vaadin Flow 25.0.7**: Modern Java web framework with Material Design components
-- **Spring Boot 4.0.3**: Application framework with dependency injection
+- **Vaadin Flow 25.0.13**: Modern Java web framework
+- **Spring Boot 4.0.8**: Application framework with dependency injection
 - **Spring Data JPA**: Database persistence layer
 - **Spring Security**: Role-based authentication and authorization
 - **H2 Database**: In-memory database (easily replaceable with production database)
@@ -60,10 +64,12 @@ java -jar target/knowledge-base-1.0-SNAPSHOT.jar
 
 ## Usage
 
-### Default Users
-The application comes with two default users:
-- **Admin**: `admin@avec.io` / `admin` (can create, edit, and delete articles)
-- **User**: `user@avec.io` / `user` (read-only access)
+### Demo Users
+The `demo` profile creates two users for local evaluation only:
+- **Admin**: `admin` / `admin` (can create, edit, and delete articles)
+- **User**: `user` / `user` (read-only access)
+
+These users, their profile pictures, and the sample knowledge-base content are not initialized by the default profile.
 
 ### Creating Articles
 1. Log in as an admin user

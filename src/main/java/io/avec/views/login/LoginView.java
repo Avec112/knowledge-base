@@ -10,6 +10,7 @@ import com.vaadin.flow.router.internal.RouteUtil;
 import com.vaadin.flow.server.VaadinService;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import io.avec.security.AuthenticatedUser;
+import org.springframework.beans.factory.annotation.Value;
 
 @AnonymousAllowed
 @PageTitle("Login")
@@ -18,14 +19,17 @@ public class LoginView extends LoginOverlay implements BeforeEnterObserver {
 
     private final AuthenticatedUser authenticatedUser;
 
-    public LoginView(AuthenticatedUser authenticatedUser) {
+    public LoginView(AuthenticatedUser authenticatedUser,
+                     @Value("${knowledge-base.demo-login-hint:false}") boolean showDemoLoginHint) {
         this.authenticatedUser = authenticatedUser;
         setAction(RouteUtil.getRoutePath(VaadinService.getCurrent().getContext(), getClass()));
 
         LoginI18n i18n = LoginI18n.createDefault();
         i18n.setHeader(new LoginI18n.Header());
         i18n.getHeader().setTitle("App");
-        i18n.getHeader().setDescription("Login using user/user or admin/admin");
+        i18n.getHeader().setDescription(showDemoLoginHint
+                ? "Login using user/user or admin/admin"
+                : "Sign in with your assigned account");
         i18n.setAdditionalInformation(null);
         setI18n(i18n);
 

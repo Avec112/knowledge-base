@@ -12,7 +12,7 @@ public abstract class AbstractEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "idgenerator")
-    // The initial value is to account for data.sql demo data ids
+    // Keep generated IDs separate from the explicit IDs used by the optional demo profile.
     @SequenceGenerator(name = "idgenerator", initialValue = 1000)
     private Long id;
 
