@@ -62,6 +62,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
+import java.util.Objects;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -770,12 +771,12 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
     private void registerEditorShortcuts() {
         removeEditorShortcuts();
-        saveShortcut = Shortcuts.addShortcutListener(this, this::saveArticle, Key.KEY_S, KeyModifier.CONTROL);
+        saveShortcut = Shortcuts.addShortcutListener(this, this::handleSaveShortcut, Key.KEY_S, KeyModifier.CONTROL);
         cancelShortcut = Shortcuts.addShortcutListener(this, this::handleCancelShortcut, Key.ESCAPE);
     }
 
     private void handleCancelShortcut() {
-        if (!editMode) {
+        if (!editMode || !hasUnsavedChanges()) {
             cancelEdit();
             return;
         }
@@ -829,16 +830,53 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         }
     }
 
-    private void saveArticle() {
+    private void handleSaveShortcut() {
         if (currentArticle == null) {
             return;
         }
 
+        applyEditorFields();
+        try {
+            currentArticle = articleService.save(currentArticle);
+            refreshArticleList();
+            Notification.show("Lagret", 2000, Notification.Position.BOTTOM_END);
+        } catch (Exception e) {
+            Notification.show("Error saving article: " + e.getMessage());
+        }
+    }
+
+    private void applyEditorFields() {
         currentArticle.setTitle(titleField.getValue());
         currentArticle.setCategory(categoryField.getValue());
         currentArticle.setStatus(statusField.getValue() != null ? statusField.getValue() : ArticleStatus.DRAFT);
         currentArticle.setContent(contentArea.getValue());
         authenticatedUser.get().ifPresent(currentArticle::setUpdatedBy);
+    }
+
+    private boolean hasUnsavedChanges() {
+        if (currentArticle == null) {
+            return false;
+        }
+        ArticleStatus fieldStatus = statusField.getValue() != null ? statusField.getValue() : ArticleStatus.DRAFT;
+        ArticleStatus articleStatus = currentArticle.getStatus() != null ? currentArticle.getStatus() : ArticleStatus.DRAFT;
+        Long fieldCategoryId = categoryField.getValue() != null ? categoryField.getValue().getId() : null;
+        Long articleCategoryId = currentArticle.getCategory() != null ? currentArticle.getCategory().getId() : null;
+        return !Objects.equals(nullToEmpty(titleField.getValue()), nullToEmpty(currentArticle.getTitle()))
+                || !Objects.equals(nullToEmpty(contentArea.getValue()), nullToEmpty(currentArticle.getContent()))
+                || fieldStatus != articleStatus
+                || !Objects.equals(fieldCategoryId, articleCategoryId);
+    }
+
+    private static String nullToEmpty(String value) {
+        return value != null ? value : "";
+    }
+
+    private void saveArticle() {
+        if (currentArticle == null) {
+            return;
+        }
+
+        applyEditorFields();
 
         try {
             currentArticle = articleService.save(currentArticle);
@@ -913,7 +951,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
     @Override
     public void beforeLeave(BeforeLeaveEvent event) {
-        if (!editMode) {
+        if (!editMode || !hasUnsavedChanges()) {
             return;
         }
 
