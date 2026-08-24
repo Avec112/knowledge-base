@@ -4,6 +4,50 @@
   --kb-reading-width: 850px;
 }
 
+/* Sidebar brand header — the standalone shell's app identity */
+.knowledge-base-view .kb-brand {
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--lumo-space-s);
+  padding: var(--lumo-space-s) var(--lumo-space-m) var(--lumo-space-xs) var(--lumo-space-m);
+  font-size: var(--lumo-font-size-l);
+  font-weight: 600;
+  color: var(--lumo-header-text-color);
+}
+
+.knowledge-base-view .kb-brand-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--lumo-border-radius-m);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--lumo-primary-color);
+  color: var(--lumo-primary-contrast-color);
+}
+
+.knowledge-base-view .kb-brand-mark vaadin-icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* User row pinned under the sidebar footer */
+.knowledge-base-view .kb-user-row {
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--lumo-space-s);
+  padding: var(--lumo-space-s) var(--lumo-space-m);
+  border-top: 1px solid var(--lumo-contrast-10pct);
+  font-size: var(--lumo-font-size-s);
+  font-weight: 500;
+}
+
+.knowledge-base-view .kb-user-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Sidebar */
 .knowledge-base-view .kb-sidebar {
   background: var(--lumo-contrast-5pct);

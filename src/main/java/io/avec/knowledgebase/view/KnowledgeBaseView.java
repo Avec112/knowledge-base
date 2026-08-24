@@ -44,12 +44,13 @@ import io.avec.knowledgebase.service.ImportResult;
 import io.avec.knowledgebase.service.KnowledgeBaseExportService;
 import io.avec.knowledgebase.service.KnowledgeBaseImportService;
 import io.avec.security.AuthenticatedUser;
-import io.avec.views.MainLayout;
 import jakarta.annotation.security.PermitAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.vaadin.lineawesome.LineAwesomeIconUrl;
+import com.vaadin.flow.component.avatar.Avatar;
 import com.vaadin.flow.component.markdown.Markdown;
+import com.vaadin.flow.server.StreamResource;
 import com.vaadin.flow.server.streams.DownloadHandler;
 import com.vaadin.flow.server.streams.DownloadResponse;
 
@@ -72,7 +73,7 @@ import java.util.function.Consumer;
 
 
 @PageTitle("KnowledgeBase")
-@Route(value = "knowledge", layout = MainLayout.class)
+@Route(value = "knowledge", autoLayout = false)
 @Menu(order = 0, icon = LineAwesomeIconUrl.GRADUATION_CAP_SOLID)
 @PermitAll
 public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter<String>, BeforeLeaveObserver {
@@ -128,6 +129,9 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final Button downloadArticleButton = new Button();
 
     private final VerticalLayout sidebar = new VerticalLayout();
+    private final Span brandTitle = new Span("KnowledgeBase");
+    private final Span userNameLabel = new Span();
+    private final Button signOutButton = new Button(VaadinIcon.SIGN_OUT.create());
     private final VerticalLayout editorLayout = new VerticalLayout();
     private final Div articleColumn = new Div();
     private final HorizontalLayout crumbs = new HorizontalLayout();
@@ -326,9 +330,55 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
         footer.add(createButton, createCategoryButton);
 
-        sidebar.add(top, articleTree, footer);
+        sidebar.add(createBrandHeader(), top, articleTree, footer, createUserRow());
         sidebar.setFlexGrow(1, articleTree);
         return sidebar;
+    }
+
+    private HorizontalLayout createBrandHeader() {
+        HorizontalLayout brand = new HorizontalLayout();
+        brand.addClassName("kb-brand");
+        brand.setWidthFull();
+        brand.setPadding(false);
+        brand.setSpacing(false);
+        brand.setAlignItems(Alignment.CENTER);
+
+        Span brandMark = new Span(VaadinIcon.BOOK.create());
+        brandMark.addClassName("kb-brand-mark");
+
+        brand.add(brandMark, brandTitle);
+        return brand;
+    }
+
+    private HorizontalLayout createUserRow() {
+        HorizontalLayout userRow = new HorizontalLayout();
+        userRow.addClassName("kb-user-row");
+        userRow.setWidthFull();
+        userRow.setPadding(false);
+        userRow.setSpacing(false);
+        userRow.setAlignItems(Alignment.CENTER);
+
+        Avatar avatar = new Avatar();
+        avatar.setThemeName("xsmall");
+        avatar.getElement().setAttribute("tabindex", "-1");
+        userNameLabel.addClassName("kb-user-name");
+        authenticatedUser.get().ifPresent(user -> {
+            avatar.setName(user.getName());
+            userNameLabel.setText(user.getName());
+            if (user.getProfilePicture() != null) {
+                avatar.setImageResource(new StreamResource("profile-pic",
+                    () -> new ByteArrayInputStream(user.getProfilePicture())));
+            }
+        });
+
+        signOutButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE, ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ICON);
+        signOutButton.getElement().setProperty("title", "Sign out");
+        signOutButton.getElement().setAttribute("aria-label", "Sign out");
+        signOutButton.addClickListener(e -> authenticatedUser.logout());
+
+        userRow.add(avatar, userNameLabel, signOutButton);
+        userRow.setFlexGrow(1, userNameLabel);
+        return userRow;
     }
 
     private HorizontalLayout createContentHeader() {
@@ -665,7 +715,10 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         // Status field (edit mode)
         statusField.setWidthFull();
         statusField.setItems(ArticleStatus.DRAFT, ArticleStatus.PUBLISHED);
-        statusField.setItemLabelGenerator(ArticleStatus::name);
+        statusField.setItemLabelGenerator(status -> switch (status) {
+            case DRAFT -> "Draft";
+            case PUBLISHED -> "Published";
+        });
 
         HorizontalLayout fieldRow = new HorizontalLayout(categoryField, statusField);
         fieldRow.addClassName("kb-field-row");
