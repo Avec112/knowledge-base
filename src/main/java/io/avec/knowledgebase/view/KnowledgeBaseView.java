@@ -27,6 +27,8 @@ import com.vaadin.flow.component.treegrid.TreeGrid;
 import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.grid.dnd.GridDropLocation;
 import com.vaadin.flow.component.grid.dnd.GridDropMode;
+import com.vaadin.flow.component.upload.Upload;
+import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
 import com.vaadin.flow.data.provider.DataProvider;
 import com.vaadin.flow.data.provider.hierarchy.TreeData;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
@@ -38,7 +40,9 @@ import io.avec.knowledgebase.data.ArticleStatus;
 import io.avec.knowledgebase.data.Category;
 import io.avec.knowledgebase.service.ArticleService;
 import io.avec.knowledgebase.service.CategoryService;
+import io.avec.knowledgebase.service.ImportResult;
 import io.avec.knowledgebase.service.KnowledgeBaseExportService;
+import io.avec.knowledgebase.service.KnowledgeBaseImportService;
 import io.avec.security.AuthenticatedUser;
 import io.avec.views.MainLayout;
 import jakarta.annotation.security.PermitAll;
@@ -77,6 +81,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final ArticleService articleService;
     private final CategoryService categoryService;
     private final KnowledgeBaseExportService exportService;
+    private final KnowledgeBaseImportService importService;
     private final AuthenticatedUser authenticatedUser;
 
     private final TreeGrid<WikiType> articleTree = new TreeGrid<>();
@@ -117,6 +122,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final Button deleteButton = new Button("Delete");
     private final Button deleteCategoryButton = new Button("Delete category");
     private final Button exportButton = new Button("Export");
+    private final Button importButton = new Button("Import");
     private final Button copyLinkButton = new Button();
     private final Button downloadArticleButton = new Button();
 
@@ -145,10 +151,12 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private boolean markdownHelpVisible = false;
 
     public KnowledgeBaseView(ArticleService articleService, CategoryService categoryService,
-                             KnowledgeBaseExportService exportService, AuthenticatedUser authenticatedUser) {
+                             KnowledgeBaseExportService exportService, KnowledgeBaseImportService importService,
+                             AuthenticatedUser authenticatedUser) {
         this.articleService = articleService;
         this.categoryService = categoryService;
         this.exportService = exportService;
+        this.importService = importService;
         this.authenticatedUser = authenticatedUser;
 
         checkAdminRole();
@@ -406,8 +414,13 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         exportLink.getElement().setAttribute("download", true);
         exportLink.add(exportButton);
 
+        importButton.setIcon(VaadinIcon.UPLOAD_ALT.create());
+        importButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+        importButton.addClickListener(e -> openImportDialog());
+        importButton.setVisible(false);
+
         actions.add(editCategoryButton, deleteCategoryButton, editButton, duplicateButton, deleteButton, copyLinkButton,
-            downloadArticleLink, headerDivider, exportLink, previewButton, cancelButton, saveButton);
+            downloadArticleLink, headerDivider, exportLink, importButton, previewButton, cancelButton, saveButton);
 
         header.add(crumbs, actions);
         return header;
@@ -494,6 +507,41 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
                 return DownloadResponse.error(500, "Could not generate knowledge base export", e);
             }
         });
+    }
+
+    private void openImportDialog() {
+        if (!isAdmin) {
+            Notification.show("Only administrators can import content");
+            return;
+        }
+
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle("Import knowledge base");
+
+        MemoryBuffer buffer = new MemoryBuffer();
+        Upload upload = new Upload(buffer);
+        upload.setAcceptedFileTypes(".zip", "application/zip");
+        upload.setMaxFiles(1);
+        upload.addSucceededListener(event -> {
+            try {
+                byte[] zipBytes = buffer.getInputStream().readAllBytes();
+                ImportResult result = importService.importZip(zipBytes);
+                dialog.close();
+                refreshArticleList();
+                Notification.show(result.importedCount() + " imported, " + result.skippedSlugs().size()
+                    + " skipped, " + result.newCategoriesCount() + " new categories");
+            } catch (Exception ex) {
+                LOGGER.error("Could not import knowledge base zip", ex);
+                Notification.show("Import failed: " + ex.getMessage());
+            }
+        });
+
+        Button cancel = new Button("Cancel", e -> dialog.close());
+        VerticalLayout content = new VerticalLayout(upload);
+        content.setPadding(false);
+        dialog.add(content);
+        dialog.getFooter().add(cancel);
+        dialog.open();
     }
 
     private DownloadHandler createArticleDownloadHandler() {
@@ -985,6 +1033,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         if (exportLink != null) {
             exportLink.setVisible(isAdmin && !editMode);
         }
+        importButton.setVisible(isAdmin && !editMode);
         headerDivider.setVisible(!editMode && isAdmin && (hasArticle || hasCategory));
 
         articleTree.setEnabled(!editMode);

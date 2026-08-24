@@ -21,6 +21,7 @@ import io.avec.knowledgebase.data.ArticleStatus;
 import io.avec.knowledgebase.service.ArticleService;
 import io.avec.knowledgebase.service.CategoryService;
 import io.avec.knowledgebase.service.KnowledgeBaseExportService;
+import io.avec.knowledgebase.service.KnowledgeBaseImportService;
 import io.avec.security.AuthenticatedUser;
 import java.net.URI;
 import java.util.List;
@@ -37,6 +38,7 @@ class KnowledgeBaseViewStateTest {
     private final ArticleService articleService = mock(ArticleService.class);
     private final CategoryService categoryService = mock(CategoryService.class);
     private final KnowledgeBaseExportService exportService = mock(KnowledgeBaseExportService.class);
+    private final KnowledgeBaseImportService importService = mock(KnowledgeBaseImportService.class);
     private final AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
     private MockedStatic<StreamResourceRegistry> streamResourceRegistry;
     private KnowledgeBaseView view;
@@ -54,7 +56,7 @@ class KnowledgeBaseViewStateTest {
         when(articleService.findVisibleUncategorized()).thenReturn(List.of());
         when(articleService.findVisibleBySlug("markdown-syntax")).thenReturn(Optional.empty());
 
-        view = new KnowledgeBaseView(articleService, categoryService, exportService, authenticatedUser);
+        view = new KnowledgeBaseView(articleService, categoryService, exportService, importService, authenticatedUser);
     }
 
     @AfterEach
