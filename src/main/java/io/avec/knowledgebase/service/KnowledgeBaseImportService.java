@@ -139,7 +139,7 @@ public class KnowledgeBaseImportService {
         // even though they carry no articles of their own.
         List<ZipRecord> directories = records.stream()
             .filter(ZipRecord::directory)
-            .sorted(Comparator.comparingInt(record -> depth(record.path())))
+            .sorted(Comparator.comparingInt(dir -> depth(dir.path())))
             .toList();
         for (ZipRecord directory : directories) {
             newCategories += resolveCategoryPath(directory.path(), categoriesByPath).created();
