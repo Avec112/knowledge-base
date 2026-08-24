@@ -118,6 +118,17 @@ public class ArticleService {
         }
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    public Article duplicate(Article article) {
+        Article copy = new Article();
+        copy.setTitle(article.getTitle() + " (kopi)");
+        copy.setContent(article.getContent());
+        copy.setCategory(article.getCategory());
+        copy.setStatus(ArticleStatus.DRAFT);
+        copy.setSlug(generateUniqueSlug(copy.getTitle(), null));
+        return copy;
+    }
+
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void delete(Article article) {

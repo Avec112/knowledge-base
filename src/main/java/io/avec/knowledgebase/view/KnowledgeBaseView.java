@@ -113,6 +113,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final Button previewButton = new Button("Preview");
     private final Button saveButton = new Button("Save");
     private final Button cancelButton = new Button("Cancel");
+    private final Button duplicateButton = new Button("Duplicate");
     private final Button deleteButton = new Button("Delete");
     private final Button deleteCategoryButton = new Button("Delete category");
     private final Button exportButton = new Button("Export");
@@ -347,6 +348,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         editButton.addClickListener(e -> enableEditMode());
         editButton.setVisible(false);
 
+        duplicateButton.setIcon(VaadinIcon.COPY.create());
+        duplicateButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+        duplicateButton.addClickListener(e -> duplicateArticle());
+        duplicateButton.setVisible(false);
+
         deleteButton.setIcon(VaadinIcon.TRASH.create());
         deleteButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
         deleteButton.addClickListener(e -> deleteArticle());
@@ -400,7 +406,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         exportLink.getElement().setAttribute("download", true);
         exportLink.add(exportButton);
 
-        actions.add(editCategoryButton, deleteCategoryButton, editButton, deleteButton, copyLinkButton,
+        actions.add(editCategoryButton, deleteCategoryButton, editButton, duplicateButton, deleteButton, copyLinkButton,
             downloadArticleLink, headerDivider, exportLink, previewButton, cancelButton, saveButton);
 
         header.add(crumbs, actions);
@@ -767,6 +773,14 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         }
     }
 
+    private void duplicateArticle() {
+        if (currentArticle == null || currentArticle.getId() == null) {
+            return;
+        }
+        currentArticle = articleService.duplicate(currentArticle);
+        enableEditMode();
+    }
+
     private void deleteArticle() {
         if (currentArticle == null || currentArticle.getId() == null) {
             return;
@@ -961,6 +975,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         previewButton.setVisible(editMode);
         saveButton.setVisible(editMode);
         cancelButton.setVisible(editMode);
+        duplicateButton.setVisible(hasId && !hasCategory && !editMode && isAdmin);
         deleteButton.setVisible(hasId && !hasCategory && !editMode && isAdmin);
         deleteCategoryButton.setVisible(hasCategory && !editMode && isAdmin);
         copyLinkButton.setVisible(hasArticle && !editMode);
