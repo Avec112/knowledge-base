@@ -1,5 +1,6 @@
 package io.avec.knowledgebase.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -29,6 +30,9 @@ class KnowledgeBaseMethodSecurityTest {
     private CategoryService categoryService;
 
     @Autowired
+    private KnowledgeBaseImportService importService;
+
+    @Autowired
     private ArticleRepository articleRepository;
 
     @Autowired
@@ -46,7 +50,8 @@ class KnowledgeBaseMethodSecurityTest {
             () -> assertThrows(AccessDeniedException.class, () -> categoryService.save(category)),
             () -> assertThrows(AccessDeniedException.class, () -> categoryService.delete(category)),
             () -> assertThrows(AccessDeniedException.class,
-                () -> categoryService.reorderRootCategories(List.of(category)))
+                () -> categoryService.reorderRootCategories(List.of(category))),
+            () -> assertThrows(AccessDeniedException.class, () -> importService.importZip(new byte[0]))
         );
     }
 
@@ -70,12 +75,14 @@ class KnowledgeBaseMethodSecurityTest {
         categoryService.save(category);
         categoryService.delete(category);
         categoryService.reorderRootCategories(List.of(category));
+        ImportResult importResult = importService.importZip(emptyZipBytes());
 
         verify(articleRepository).saveAndFlush(article);
         verify(articleRepository).delete(article);
         verify(categoryRepository).save(category);
         verify(categoryRepository).delete(category);
         verify(categoryRepository).saveAll(List.of(category));
+        assertThat(importResult.importedCount()).isZero();
     }
 
     private Article article() {
@@ -88,6 +95,18 @@ class KnowledgeBaseMethodSecurityTest {
         Category category = new Category();
         category.setName("Category");
         return category;
+    }
+
+    private byte[] emptyZipBytes() {
+        try {
+            var output = new java.io.ByteArrayOutputStream();
+            try (var zip = new java.util.zip.ZipOutputStream(output)) {
+                // no entries - a minimal but structurally valid zip archive
+            }
+            return output.toByteArray();
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
     }
 
     @Configuration(proxyBeanMethods = false)
@@ -113,6 +132,11 @@ class KnowledgeBaseMethodSecurityTest {
         CategoryService categoryService(CategoryRepository categoryRepository,
                                         ArticleRepository articleRepository) {
             return new CategoryService(categoryRepository, articleRepository);
+        }
+
+        @Bean
+        KnowledgeBaseImportService importService(ArticleService articleService, CategoryService categoryService) {
+            return new KnowledgeBaseImportService(articleService, categoryService);
         }
     }
 }

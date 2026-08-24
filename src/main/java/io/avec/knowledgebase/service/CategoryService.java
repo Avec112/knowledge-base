@@ -47,6 +47,19 @@ public class CategoryService {
         return categoryRepository.findBySlug(slug);
     }
 
+    /**
+     * Looks up a category by name (case-insensitive). Category names are enforced globally
+     * unique by {@link #save(Category)}, so this alone is enough for a find-or-create by
+     * name lookup - callers that also need to disambiguate by parent (e.g. import) can rely
+     * on that uniqueness instead of a compound key.
+     */
+    public Optional<Category> findByName(String name) {
+        if (name == null || name.isBlank()) {
+            return Optional.empty();
+        }
+        return categoryRepository.findByNameIgnoreCase(name.trim());
+    }
+
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public Category save(Category category) {
