@@ -125,6 +125,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
         checkAdminRole();
 
+        addClassName("knowledge-base-view");
         setSizeFull();
         setPadding(false);
         setSpacing(false);

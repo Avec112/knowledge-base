@@ -1,5 +1,5 @@
 /* KnowledgeBase Layout Areas */
-.kb-sidebar {
+.knowledge-base-view .kb-sidebar {
   background: var(--lumo-base-color);
   border-right: 1px solid var(--lumo-contrast-10pct);
   height: 100%;
@@ -9,31 +9,31 @@
   --vaadin-grid-tree-toggle-leaf-offset: 0em;
 }
 
-.kb-sidebar::part(first-column-cell) {
+.knowledge-base-view .kb-sidebar::part(first-column-cell) {
   padding-inline-start: 0;
   padding-inline-end: var(--lumo-space-xs);
 }
 
-.kb-sidebar::part(category) {
+.knowledge-base-view .kb-sidebar::part(category) {
   background: var(--lumo-contrast-5pct);
 }
 
-.kb-content-area {
+.knowledge-base-view .kb-content-area {
   background: var(--lumo-base-color);
   height: 100%;
 }
 
-.content-editor-layout {
+.knowledge-base-view .content-editor-layout {
   align-items: stretch;
   gap: var(--lumo-space-s);
 }
 
-.content-editor-layout > vaadin-text-area {
+.knowledge-base-view .content-editor-layout > vaadin-text-area {
   flex: 3 1 0;
   min-width: 0;
 }
 
-.markdown-help-panel {
+.knowledge-base-view .markdown-help-panel {
   flex: 2 1 0;
   width: auto;
   min-width: 0;
@@ -45,18 +45,18 @@
 }
 
 @media (max-width: 700px) {
-  .content-editor-layout {
+  .knowledge-base-view .content-editor-layout {
     flex-direction: column;
   }
 
-  .content-editor-layout > vaadin-text-area,
-  .markdown-help-panel {
+  .knowledge-base-view .content-editor-layout > vaadin-text-area,
+  .knowledge-base-view .markdown-help-panel {
     flex: 0 1 auto;
     width: 100%;
   }
 }
 
-.markdown-help-content {
+.knowledge-base-view .markdown-help-content {
   margin: 0;
   padding: var(--lumo-space-m);
   border: none;
@@ -66,12 +66,12 @@
   max-width: none;
 }
 
-.kb-button-bar {
+.knowledge-base-view .kb-button-bar {
   background: var(--lumo-shade-20pct);
   border-bottom: 1px solid var(--lumo-contrast-10pct);
 }
 
-.article-metadata {
+.knowledge-base-view .article-metadata {
   border: 1px solid var(--lumo-contrast-10pct);
   background: var(--lumo-contrast-5pct);
   border-radius: var(--lumo-border-radius-m);
@@ -80,18 +80,18 @@
   margin-bottom: var(--lumo-space-m);
 }
 
-.article-metadata-strip {
+.knowledge-base-view .article-metadata-strip {
   display: flex;
   flex-direction: column;
   gap: var(--lumo-space-xs);
 }
 
-.metadata-status-row {
+.knowledge-base-view .metadata-status-row {
   display: flex;
   align-items: center;
 }
 
-.metadata-grid-row {
+.knowledge-base-view .metadata-grid-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   column-gap: var(--lumo-space-s);
@@ -99,20 +99,20 @@
   align-items: center;
 }
 
-.metadata-grid-cell {
+.knowledge-base-view .metadata-grid-cell {
   min-width: 0;
   display: flex;
   align-items: center;
 }
 
-.metadata-grid-label {
+.knowledge-base-view .metadata-grid-label {
   color: var(--lumo-secondary-text-color);
   font-size: var(--lumo-font-size-s);
   font-weight: 600;
   white-space: normal;
 }
 
-.metadata-grid-value {
+.knowledge-base-view .metadata-grid-value {
   color: var(--lumo-body-text-color);
   font-size: var(--lumo-font-size-s);
   line-height: 1.2;
@@ -121,7 +121,7 @@
   text-overflow: ellipsis;
 }
 
-.status-badge {
+.knowledge-base-view .status-badge {
   display: inline-block;
   border-radius: 999px;
   padding: 2px 10px;
@@ -131,20 +131,20 @@
   border: 1px solid transparent;
 }
 
-.status-badge-neutral {
+.knowledge-base-view .status-badge-neutral {
   color: var(--lumo-body-text-color);
   background: var(--lumo-contrast-10pct);
   border-color: var(--lumo-contrast-20pct);
 }
 
-.status-badge-success {
+.knowledge-base-view .status-badge-success {
   color: var(--lumo-success-text-color);
   background: var(--lumo-success-color-10pct);
   border-color: var(--lumo-success-color-50pct);
 }
 
 /* Wiki Content Theme */
-.wiki-content {
+.knowledge-base-view .wiki-content {
   border: 1px solid var(--lumo-contrast-10pct);
   background: var(--lumo-contrast-5pct);
   border-radius: var(--lumo-border-radius-m);
@@ -156,10 +156,10 @@
 }
 
 /* Headings */
-.wiki-content h1,
-.wiki-content h2,
-.wiki-content h3,
-.wiki-content h4 {
+.knowledge-base-view .wiki-content h1,
+.knowledge-base-view .wiki-content h2,
+.knowledge-base-view .wiki-content h3,
+.knowledge-base-view .wiki-content h4 {
   margin-top: 1.5em;
   margin-bottom: 0.5em;
   font-weight: 600;
@@ -167,49 +167,49 @@
   padding-bottom: 0.3em;
 }
 
-.wiki-content h1 {
+.knowledge-base-view .wiki-content h1 {
   font-size: 2em;
   margin-top: 0;
 }
 
-.wiki-content h2 {
+.knowledge-base-view .wiki-content h2 {
   font-size: 1.6em;
 }
 
-.wiki-content h3 {
+.knowledge-base-view .wiki-content h3 {
   font-size: 1.3em;
 }
 
 /* Paragraphs */
-.wiki-content p {
+.knowledge-base-view .wiki-content p {
   margin: 1em 0;
 }
 
 /* Links */
-.wiki-content a {
+.knowledge-base-view .wiki-content a {
   color: var(--lumo-primary-color);
   text-decoration: none;
   border-bottom: 1px solid transparent;
   transition: border-color 0.2s;
 }
 
-.wiki-content a:hover {
+.knowledge-base-view .wiki-content a:hover {
   border-bottom-color: var(--lumo-primary-color);
 }
 
 /* Lists */
-.wiki-content ul,
-.wiki-content ol {
+.knowledge-base-view .wiki-content ul,
+.knowledge-base-view .wiki-content ol {
   margin: 1em 0;
   padding-left: 2em;
 }
 
-.wiki-content li {
+.knowledge-base-view .wiki-content li {
   margin: 0.4em 0;
 }
 
 /* Blockquotes */
-.wiki-content blockquote {
+.knowledge-base-view .wiki-content blockquote {
   margin: 1.5em 0;
   padding: 1em 1.5em;
   background: var(--lumo-primary-color-10pct);
@@ -219,33 +219,33 @@
 }
 
 /* Tables */
-.wiki-content table {
+.knowledge-base-view .wiki-content table {
   width: 100%;
   border-collapse: collapse;
   margin: 1.5em 0;
 }
 
-.wiki-content th,
-.wiki-content td {
+.knowledge-base-view .wiki-content th,
+.knowledge-base-view .wiki-content td {
   border: 1px solid var(--lumo-contrast-10pct);
   padding: 0.75em 1em;
   text-align: left;
 }
 
-.wiki-content th {
+.knowledge-base-view .wiki-content th {
   background: var(--lumo-contrast-5pct);
   font-weight: 600;
 }
 
 /* Horizontal rules */
-.wiki-content hr {
+.knowledge-base-view .wiki-content hr {
   border: none;
   border-top: 1px solid var(--lumo-contrast-10pct);
   margin: 2em 0;
 }
 
 /* Code blocks */
-.wiki-content pre {
+.knowledge-base-view .wiki-content pre {
   background: var(--lumo-shade-20pct);
   border: 1px solid var(--lumo-contrast-10pct);
   border-radius: var(--lumo-border-radius-m);
@@ -254,7 +254,7 @@
   margin: 1.5em 0;
 }
 
-.wiki-content pre code {
+.knowledge-base-view .wiki-content pre code {
   background: transparent;
   border: none;
   padding: 0;
