@@ -30,9 +30,6 @@ public class Category extends AbstractEntity {
     @OrderBy("sortOrder ASC, id ASC")
     private List<Category> children = new ArrayList<>();
 
-    @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
-    private List<Article> articles = new ArrayList<>();
-
     @Column(nullable = false)
     private Integer sortOrder = 0;
 
@@ -74,14 +71,6 @@ public class Category extends AbstractEntity {
 
     public void setChildren(List<Category> children) {
         this.children = children;
-    }
-
-    public List<Article> getArticles() {
-        return articles;
-    }
-
-    public void setArticles(List<Article> articles) {
-        this.articles = articles;
     }
 
     public Integer getSortOrder() {

@@ -43,10 +43,6 @@ public class CategoryService {
         return categoryRepository.findById(id);
     }
 
-    public Optional<Category> findByIdWithArticles(Long id) {
-        return categoryRepository.findByIdWithArticles(id);
-    }
-
     public Optional<Category> findBySlug(String slug) {
         return categoryRepository.findBySlug(slug);
     }
