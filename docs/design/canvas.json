@@ -1,0 +1,11 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1280, "h": 840, "title": "Artikkel · Lumo Light" },
+    { "file": "Dark.dc.html", "x": 1380, "y": 0, "w": 1280, "h": 840, "title": "Artikkel · Lumo Dark" },
+    { "file": "Editor.dc.html", "x": 0, "y": 980, "w": 1280, "h": 840, "title": "Redigering · Lumo Light" }
+  ],
+  "annotations": [
+    { "id": "forslag-oppsummering", "x": 2760, "y": 0, "w": 320, "text": "Designforslag – hva som er endret fra dagens KnowledgeBaseView:\n\n1. Verktøylinjen øverst er flyttet inn i innholdspanelet som en slank header: brødsmulesti til venstre, kontekstuelle handlinger (Edit / Delete / Export) til høyre. «New article» og «New category» ligger nederst i sidepanelet.\n\n2. Sidepanelet har fått svak kontrastbakgrunn (contrast-5pct). Valgt artikkel markeres med primary-10pct-bakgrunn + 3px aksentstripe i primærfargen.\n\n3. Metadata (status, oppdatert/opprettet) vises som én diskret linje under tittelen i stedet for dagens metadata-boks.\n\n4. Artikkelinnholdet ligger rett på basisfargen uten kort/ramme, med 850px lesebredde og samme wiki-typografi som i dag.\n\n5. Redigeringsmodus: sidepanelet dempes, Save/Cancel/Preview ligger i headeren, og forhåndsvisningen vises side om side med Markdown-editoren.\n\nAlt bruker kun Lumo-tokens (25.0.13), så light/dark følger automatisk av temaet." }
+  ],
+  "launch": { "view": "canvas" }
+}
