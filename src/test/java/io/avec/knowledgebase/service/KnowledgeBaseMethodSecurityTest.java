@@ -5,12 +5,15 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import io.avec.knowledgebase.data.Article;
 import io.avec.knowledgebase.data.ArticleRepository;
 import io.avec.knowledgebase.data.Category;
 import io.avec.knowledgebase.data.CategoryRepository;
+import io.avec.security.AuthenticatedUser;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -47,6 +50,7 @@ class KnowledgeBaseMethodSecurityTest {
         assertAll(
             () -> assertThrows(AccessDeniedException.class, () -> articleService.save(article)),
             () -> assertThrows(AccessDeniedException.class, () -> articleService.delete(article)),
+            () -> assertThrows(AccessDeniedException.class, () -> articleService.duplicate(article)),
             () -> assertThrows(AccessDeniedException.class, () -> categoryService.save(category)),
             () -> assertThrows(AccessDeniedException.class, () -> categoryService.delete(category)),
             () -> assertThrows(AccessDeniedException.class,
@@ -72,6 +76,7 @@ class KnowledgeBaseMethodSecurityTest {
 
         articleService.save(article);
         articleService.delete(article);
+        Article duplicated = articleService.duplicate(article);
         categoryService.save(category);
         categoryService.delete(category);
         categoryService.reorderRootCategories(List.of(category));
@@ -79,6 +84,7 @@ class KnowledgeBaseMethodSecurityTest {
 
         verify(articleRepository).saveAndFlush(article);
         verify(articleRepository).delete(article);
+        assertThat(duplicated.getTitle()).isEqualTo("Article (kopi)");
         verify(categoryRepository).save(category);
         verify(categoryRepository).delete(category);
         verify(categoryRepository).saveAll(List.of(category));
@@ -135,8 +141,16 @@ class KnowledgeBaseMethodSecurityTest {
         }
 
         @Bean
-        KnowledgeBaseImportService importService(ArticleService articleService, CategoryService categoryService) {
-            return new KnowledgeBaseImportService(articleService, categoryService);
+        AuthenticatedUser authenticatedUser() {
+            AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
+            when(authenticatedUser.get()).thenReturn(Optional.empty());
+            return authenticatedUser;
+        }
+
+        @Bean
+        KnowledgeBaseImportService importService(ArticleService articleService, CategoryService categoryService,
+                                                  AuthenticatedUser authenticatedUser) {
+            return new KnowledgeBaseImportService(articleService, categoryService, authenticatedUser);
         }
     }
 }

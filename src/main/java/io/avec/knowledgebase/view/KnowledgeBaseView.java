@@ -522,12 +522,19 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         Upload upload = new Upload(buffer);
         upload.setAcceptedFileTypes(".zip", "application/zip");
         upload.setMaxFiles(1);
+        upload.setMaxFileSize(20 * 1024 * 1024); // 20 MB - generous headroom over the service's entry/size caps
+        upload.addFileRejectedListener(event ->
+            Notification.show("File rejected: " + event.getErrorMessage()));
+        upload.addFailedListener(event ->
+            Notification.show("Upload failed: "
+                + (event.getReason() != null ? event.getReason().getMessage() : "unknown error")));
         upload.addSucceededListener(event -> {
             try {
                 byte[] zipBytes = buffer.getInputStream().readAllBytes();
                 ImportResult result = importService.importZip(zipBytes);
                 dialog.close();
                 refreshArticleList();
+                refreshRecentlyUpdated();
                 Notification.show(result.importedCount() + " imported, " + result.skippedSlugs().size()
                     + " skipped, " + result.newCategoriesCount() + " new categories");
             } catch (Exception ex) {
@@ -764,7 +771,35 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private void registerEditorShortcuts() {
         removeEditorShortcuts();
         saveShortcut = Shortcuts.addShortcutListener(this, this::saveArticle, Key.KEY_S, KeyModifier.CONTROL);
-        cancelShortcut = Shortcuts.addShortcutListener(this, this::cancelEdit, Key.ESCAPE);
+        cancelShortcut = Shortcuts.addShortcutListener(this, this::handleCancelShortcut, Key.ESCAPE);
+    }
+
+    private void handleCancelShortcut() {
+        if (!editMode) {
+            cancelEdit();
+            return;
+        }
+        confirmDiscardUnsavedChanges(this::cancelEdit, null);
+    }
+
+    /**
+     * Shows the same "discard unsaved changes?" confirmation used by {@link #beforeLeave(BeforeLeaveEvent)}.
+     * Runs {@code onConfirm} if the admin confirms discarding, or {@code onCancel} (if provided) if they
+     * choose to keep editing.
+     */
+    private void confirmDiscardUnsavedChanges(Runnable onConfirm, Runnable onCancel) {
+        ConfirmDialog dialog = new ConfirmDialog();
+        dialog.setHeader("Discard unsaved changes?");
+        dialog.setText("Your article changes have not been saved.");
+        dialog.setCancelable(true);
+        dialog.setCancelText("Continue editing");
+        dialog.setConfirmText("Discard changes");
+        dialog.setConfirmButtonTheme("error primary");
+        dialog.addConfirmListener(confirmEvent -> onConfirm.run());
+        if (onCancel != null) {
+            dialog.addCancelListener(cancelEvent -> onCancel.run());
+        }
+        dialog.open();
     }
 
     private void removeEditorShortcuts() {
@@ -826,6 +861,10 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             return;
         }
         currentArticle = articleService.duplicate(currentArticle);
+        authenticatedUser.get().ifPresent(user -> {
+            currentArticle.setCreatedBy(user);
+            currentArticle.setUpdatedBy(user);
+        });
         enableEditMode();
     }
 
@@ -879,16 +918,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         }
 
         BeforeLeaveEvent.ContinueNavigationAction navigation = event.postpone();
-        ConfirmDialog dialog = new ConfirmDialog();
-        dialog.setHeader("Discard unsaved changes?");
-        dialog.setText("Your article changes have not been saved.");
-        dialog.setCancelable(true);
-        dialog.setCancelText("Continue editing");
-        dialog.setConfirmText("Discard changes");
-        dialog.setConfirmButtonTheme("error primary");
-        dialog.addConfirmListener(confirmEvent -> navigation.proceed());
-        dialog.addCancelListener(cancelEvent -> navigation.cancel());
-        dialog.open();
+        confirmDiscardUnsavedChanges(navigation::proceed, navigation::cancel);
     }
 
     private void openCreateCategoryDialog() {

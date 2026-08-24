@@ -10,12 +10,14 @@ import io.avec.knowledgebase.data.ArticleRepository;
 import io.avec.knowledgebase.data.ArticleStatus;
 import io.avec.knowledgebase.data.Category;
 import io.avec.knowledgebase.data.CategoryRepository;
+import io.avec.security.AuthenticatedUser;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,7 +51,9 @@ class KnowledgeBaseImportServiceTest {
     void setUp() {
         articleService = new ArticleService(articleRepository);
         categoryService = new CategoryService(categoryRepository, articleRepository);
-        importService = new KnowledgeBaseImportService(articleService, categoryService);
+        AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
+        when(authenticatedUser.get()).thenReturn(Optional.empty());
+        importService = new KnowledgeBaseImportService(articleService, categoryService, authenticatedUser);
     }
 
     @Test

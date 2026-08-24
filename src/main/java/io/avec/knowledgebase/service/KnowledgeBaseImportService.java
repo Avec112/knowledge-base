@@ -1,8 +1,10 @@
 package io.avec.knowledgebase.service;
 
+import io.avec.data.User;
 import io.avec.knowledgebase.data.Article;
 import io.avec.knowledgebase.data.ArticleStatus;
 import io.avec.knowledgebase.data.Category;
+import io.avec.security.AuthenticatedUser;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -44,10 +46,13 @@ public class KnowledgeBaseImportService {
 
     private final ArticleService articleService;
     private final CategoryService categoryService;
+    private final AuthenticatedUser authenticatedUser;
 
-    public KnowledgeBaseImportService(ArticleService articleService, CategoryService categoryService) {
+    public KnowledgeBaseImportService(ArticleService articleService, CategoryService categoryService,
+                                       AuthenticatedUser authenticatedUser) {
         this.articleService = articleService;
         this.categoryService = categoryService;
+        this.authenticatedUser = authenticatedUser;
     }
 
     @Transactional
@@ -134,6 +139,7 @@ public class KnowledgeBaseImportService {
         int newCategories = 0;
         int imported = 0;
         List<String> skipped = new ArrayList<>();
+        User currentUser = authenticatedUser.get().orElse(null);
 
         // Process directory entries first (shallowest first) so empty categories are recreated
         // even though they carry no articles of their own.
@@ -186,6 +192,8 @@ public class KnowledgeBaseImportService {
             article.setContent(content);
             article.setStatus(ArticleStatus.DRAFT);
             article.setCategory(category);
+            article.setCreatedBy(currentUser);
+            article.setUpdatedBy(currentUser);
             articleService.save(article);
             imported++;
         }
