@@ -1,5 +1,6 @@
 package io.avec.knowledgebase.service;
 
+import io.avec.knowledgebase.data.ArticleRepository;
 import io.avec.knowledgebase.data.Category;
 import io.avec.knowledgebase.data.CategoryRepository;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,9 +16,11 @@ import java.util.Optional;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final ArticleRepository articleRepository;
 
-    public CategoryService(CategoryRepository categoryRepository) {
+    public CategoryService(CategoryRepository categoryRepository, ArticleRepository articleRepository) {
         this.categoryRepository = categoryRepository;
+        this.articleRepository = articleRepository;
     }
 
     public List<Category> findAll() {
@@ -76,6 +79,12 @@ public class CategoryService {
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void delete(Category category) {
+        if (articleRepository.existsByCategory(category)) {
+            throw new IllegalStateException("Category has articles and cannot be deleted");
+        }
+        if (categoryRepository.existsByParent(category)) {
+            throw new IllegalStateException("Category has subcategories and cannot be deleted");
+        }
         categoryRepository.delete(category);
     }
 

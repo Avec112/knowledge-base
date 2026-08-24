@@ -29,6 +29,8 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     boolean existsBySlug(String slug);
 
+    boolean existsByCategory(Category category);
+
     @Query("SELECT a FROM Article a WHERE " +
            "LOWER(a.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
            "LOWER(a.content) LIKE LOWER(CONCAT('%', :query, '%')) " +

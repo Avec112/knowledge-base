@@ -110,8 +110,9 @@ class KnowledgeBaseMethodSecurityTest {
         }
 
         @Bean
-        CategoryService categoryService(CategoryRepository categoryRepository) {
-            return new CategoryService(categoryRepository);
+        CategoryService categoryService(CategoryRepository categoryRepository,
+                                        ArticleRepository articleRepository) {
+            return new CategoryService(categoryRepository, articleRepository);
         }
     }
 }

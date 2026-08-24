@@ -3,6 +3,7 @@ package io.avec.knowledgebase.view;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
@@ -718,8 +719,8 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             category.setName(name);
             String description = descriptionField.getValue() != null ? descriptionField.getValue().trim() : "";
             category.setDescription(description.isEmpty() ? null : description);
-            category.setParent(null);
             if (category.getId() == null) {
+                category.setParent(null);
                 category.setSortOrder(categoryService.findRootCategories().size() + 1);
             }
 
@@ -764,13 +765,20 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             return;
         }
 
-        if (!articleService.findByCategory(currentCategory).isEmpty()) {
-            Notification.show("Category has articles and cannot be deleted");
-            return;
-        }
+        Category category = currentCategory;
+        ConfirmDialog dialog = new ConfirmDialog();
+        dialog.setHeader("Delete category?");
+        dialog.setText("Delete category \"" + category.getName() + "\"?");
+        dialog.setCancelable(true);
+        dialog.setConfirmText("Delete");
+        dialog.setConfirmButtonTheme("error primary");
+        dialog.addConfirmListener(event -> performCategoryDelete(category));
+        dialog.open();
+    }
 
+    private void performCategoryDelete(Category category) {
         try {
-            categoryService.delete(currentCategory);
+            categoryService.delete(category);
             currentCategory = null;
             refreshArticleList();
             updateUI();

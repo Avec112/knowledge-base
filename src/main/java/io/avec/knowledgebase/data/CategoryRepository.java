@@ -19,6 +19,8 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     boolean existsBySlug(String slug);
 
+    boolean existsByParent(Category parent);
+
     @Query("SELECT c FROM Category c LEFT JOIN FETCH c.children WHERE c.parent IS NULL ORDER BY c.sortOrder, c.id")
     List<Category> findRootCategoriesWithChildren();
 
