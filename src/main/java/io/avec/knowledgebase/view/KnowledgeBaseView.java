@@ -12,6 +12,7 @@ import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.icon.Icon;
@@ -92,6 +93,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final Markdown editorPreview = new Markdown("");
     private final H2 titleDisplay = new H2();
     private final Div metadataDisplay = new Div();
+    private final VerticalLayout recentlyUpdatedPanel = new VerticalLayout();
     private final Div markdownHelpPanel = new Div();
     private final Div editorPreviewPanel = new Div();
     private final ComboBox<WikiType> menuSearch = new ComboBox<>();
@@ -216,6 +218,40 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         }
 
         updateUI();
+    }
+
+    private void refreshRecentlyUpdated() {
+        recentlyUpdatedPanel.removeAll();
+
+        List<Article> recentArticles = articleService.findRecentVisible();
+        if (recentArticles.isEmpty()) {
+            return;
+        }
+
+        H3 heading = new H3("Nylig oppdatert");
+        heading.addClassName("kb-recent-heading");
+        recentlyUpdatedPanel.add(heading);
+        recentArticles.forEach(article -> recentlyUpdatedPanel.add(createRecentArticleRow(article)));
+    }
+
+    private HorizontalLayout createRecentArticleRow(Article article) {
+        HorizontalLayout row = new HorizontalLayout();
+        row.addClassName("kb-recent-item");
+        row.setWidthFull();
+        row.setPadding(false);
+        row.setSpacing(true);
+        row.setAlignItems(FlexComponent.Alignment.BASELINE);
+
+        Span title = new Span(article.getTitle() != null ? article.getTitle() : "Untitled");
+        title.addClassName("kb-recent-item-title");
+        title.addClickListener(event -> getUI().ifPresent(ui -> ui.navigate("knowledge/" + article.getSlug())));
+
+        Span date = new Span(article.getUpdatedAt() != null ? article.getUpdatedAt().format(EXPORT_DATE_FORMAT) : "");
+        date.addClassName("kb-recent-item-date");
+
+        row.add(title, date);
+        row.setFlexGrow(1, title);
+        return row;
     }
 
     private void checkAdminRole() {
@@ -499,7 +535,12 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         metadataDisplay.addClassName("kb-meta-row");
         markdownPreview.setWidthFull();
         markdownPreview.addClassName("wiki-content");
-        articleColumn.add(titleDisplay, metadataDisplay, markdownPreview);
+        recentlyUpdatedPanel.addClassName("kb-recent-panel");
+        recentlyUpdatedPanel.setPadding(false);
+        recentlyUpdatedPanel.setSpacing(false);
+        recentlyUpdatedPanel.setWidthFull();
+        recentlyUpdatedPanel.setVisible(false);
+        articleColumn.add(titleDisplay, metadataDisplay, markdownPreview, recentlyUpdatedPanel);
 
         buildEditor();
 
@@ -954,6 +995,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         markdownHelpPanel.setVisible(editMode && markdownHelpVisible);
         syncEditorSecondary();
         metadataDisplay.setVisible(!editMode && hasArticle);
+        recentlyUpdatedPanel.setVisible(!editMode && !hasArticle);
         updatePreviewButton();
 
         if (hasArticle) {
@@ -973,6 +1015,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             // Keep default welcome content visible (set by showDefaultWelcome)
             // Title and markdown are already set, don't override
             metadataDisplay.setVisible(false);
+            refreshRecentlyUpdated();
         } else {
             // In edit mode but no article (shouldn't normally happen)
             titleDisplay.setText("");

@@ -159,6 +159,37 @@
   font-weight: 500;
 }
 
+.knowledge-base-view .kb-recent-panel {
+  max-width: var(--kb-reading-width);
+  margin-top: var(--lumo-space-m);
+}
+
+.knowledge-base-view .kb-recent-heading {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin: 0 0 var(--lumo-space-s) 0;
+}
+
+.knowledge-base-view .kb-recent-item {
+  padding: var(--lumo-space-xs) 0;
+  border-bottom: 1px solid var(--lumo-contrast-10pct);
+}
+
+.knowledge-base-view .kb-recent-item-title {
+  cursor: pointer;
+  color: var(--lumo-primary-text-color);
+}
+
+.knowledge-base-view .kb-recent-item-title:hover {
+  text-decoration: underline;
+}
+
+.knowledge-base-view .kb-recent-item-date {
+  font-size: var(--lumo-font-size-xs);
+  color: var(--lumo-secondary-text-color);
+  white-space: nowrap;
+}
+
 .knowledge-base-view .status-badge {
   display: inline-block;
   border-radius: 999px;

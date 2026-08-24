@@ -91,6 +91,26 @@ class ArticleServiceVisibilityTest {
         assertThat(articleService.findVisibleByCategory(category)).containsExactly(draft, published);
     }
 
+    @Test
+    void userGetsOnlyPublishedRecentArticles() {
+        Article published = article("published", ArticleStatus.PUBLISHED);
+        authenticate("ROLE_USER");
+        when(articleRepository.findTop10ByStatusOrderByUpdatedAtDesc(ArticleStatus.PUBLISHED))
+            .thenReturn(List.of(published));
+
+        assertThat(articleService.findRecentVisible()).containsExactly(published);
+    }
+
+    @Test
+    void adminGetsAllRecentArticlesRegardlessOfStatus() {
+        Article draft = article("draft", ArticleStatus.DRAFT);
+        Article published = article("published", ArticleStatus.PUBLISHED);
+        authenticate("ROLE_ADMIN");
+        when(articleRepository.findTop10ByOrderByUpdatedAtDesc()).thenReturn(List.of(draft, published));
+
+        assertThat(articleService.findRecentVisible()).containsExactly(draft, published);
+    }
+
     private void authenticate(String authority) {
         SecurityContextHolder.getContext().setAuthentication(
             new TestingAuthenticationToken("user", "password", authority));

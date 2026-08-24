@@ -49,6 +49,12 @@ public class ArticleService {
             : articleRepository.findByCategoryAndStatusOrderBySortOrderAscIdAsc(category, ArticleStatus.PUBLISHED);
     }
 
+    public List<Article> findRecentVisible() {
+        return canViewDrafts()
+            ? articleRepository.findTop10ByOrderByUpdatedAtDesc()
+            : articleRepository.findTop10ByStatusOrderByUpdatedAtDesc(ArticleStatus.PUBLISHED);
+    }
+
     @PreAuthorize("hasRole('ADMIN')")
     public List<Article> findUncategorized() {
         return articleRepository.findByCategoryIsNullOrderBySortOrderAscIdAsc();
