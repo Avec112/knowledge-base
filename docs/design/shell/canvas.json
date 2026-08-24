@@ -1,0 +1,15 @@
+{
+  "artboards": [
+    { "file": "Dagens.dc.html", "x": 0, "y": 0, "w": 1280, "h": 840, "title": "Dagens shell" },
+    { "file": "Main.dc.html", "x": 1420, "y": 0, "w": 1280, "h": 840, "title": "Forslag: integrert shell" }
+  ],
+  "annotations": [
+    { "id": "dobbel-navigasjon", "x": -410, "y": 0, "w": 320, "text": "Det som skurrer mest: dobbel navigasjon.\n\nAppLayout-draweren (MainLayout) ligger utenpå KB-viewets egen sidebar – to menyer side om side. Topplinjen på 50 px gjentar bare tittelen «KnowledgeBase» som allerede står i draweren og i fanen." },
+    { "id": "app-navn", "x": -410, "y": 300, "w": 320, "text": "Appen heter fortsatt «App».\n\nBåde i drawer-headeren (MainLayout) og som tittel på login-skjermen (LoginView). Rest fra Vaadin-starteren – bør hete KnowledgeBase begge steder." },
+    { "id": "other-stuff", "x": -410, "y": 560, "w": 320, "text": "«Other stuff» i menyen er starter-plassholderen (plantebilde + Red Hat-ikon) – og den er @AnonymousAllowed mens resten krever innlogging. Bør fjernes; da forsvinner også behovet for drawer-navigasjonen." },
+    { "id": "smaating", "x": 0, "y": 940, "w": 620, "text": "Småting som også skurrer:\n• For vanlige brukere (ikke admin) er sidebar-footeren en tom stripe med border – knappene er bare skjult.\n• Status-nedtrekket i editoren viser enum-navnene DRAFT/PUBLISHED i caps, mens badgene ellers viser «Published»/«Draft».\n• Velkomstsiden heter «Velkommen» i treet, men «Welcome to KnowledgeBase» i innholdet." },
+    { "id": "sprakmiks", "x": 1420, "y": -230, "w": 480, "text": "Språkmiks: «Velkommen» (tremenyen) og «Nylig oppdatert» (forsiden) er norsk, mens resten av UI-et er engelsk («New article», «Search articles…», «Collapse all»). Velg ett språk – forslaget viser engelsk, men norsk går like fint." },
+    { "id": "forslaget", "x": 2790, "y": 0, "w": 340, "text": "Forslaget: dropp AppLayout-shellet for KB-viewet.\n\n• App-navn med merke øverst i sidebaren (erstatter drawer-header + topplinje)\n• Brukeren flyttes til nederst i sidebaren (avatar + navn + logg ut) – footeren er aldri tom\n• ~50 px mer høyde til innholdet, én meny i stedet for to\n• «Other stuff» og draweren fjernes; login-tittelen blir «KnowledgeBase»" }
+  ],
+  "launch": { "view": "canvas" }
+}
