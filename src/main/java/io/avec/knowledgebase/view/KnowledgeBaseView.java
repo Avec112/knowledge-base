@@ -1,5 +1,9 @@
 package io.avec.knowledgebase.view;
 
+import com.vaadin.flow.component.Key;
+import com.vaadin.flow.component.KeyModifier;
+import com.vaadin.flow.component.ShortcutRegistration;
+import com.vaadin.flow.component.Shortcuts;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
@@ -121,6 +125,8 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
     private Article currentArticle;
     private Category currentCategory;
+    private ShortcutRegistration saveShortcut;
+    private ShortcutRegistration cancelShortcut;
     private boolean editMode = false;
     private boolean previewMode = false;
     private boolean isAdmin = false;
@@ -156,6 +162,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         editMode = false;
         previewMode = false;
         markdownHelpVisible = false;
+        removeEditorShortcuts();
         if (slug != null && !slug.isEmpty()) {
 
             // Check if it's the welcome article
@@ -622,13 +629,32 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         editMode = true;
         previewMode = true;
         markdownHelpVisible = false;
+        registerEditorShortcuts();
         updateUI();
+    }
+
+    private void registerEditorShortcuts() {
+        removeEditorShortcuts();
+        saveShortcut = Shortcuts.addShortcutListener(this, this::saveArticle, Key.KEY_S, KeyModifier.CONTROL);
+        cancelShortcut = Shortcuts.addShortcutListener(this, this::cancelEdit, Key.ESCAPE);
+    }
+
+    private void removeEditorShortcuts() {
+        if (saveShortcut != null) {
+            saveShortcut.remove();
+            saveShortcut = null;
+        }
+        if (cancelShortcut != null) {
+            cancelShortcut.remove();
+            cancelShortcut = null;
+        }
     }
 
     private void cancelEdit() {
         editMode = false;
         previewMode = false;
         markdownHelpVisible = false;
+        removeEditorShortcuts();
         if (currentArticle != null && currentArticle.getId() != null) {
             // Reload from database and navigate to article
             articleService.findById(currentArticle.getId()).ifPresent(article -> {
@@ -656,6 +682,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             editMode = false;
             previewMode = false;
             markdownHelpVisible = false;
+            removeEditorShortcuts();
             refreshArticleList();
             highlightSelectedArticle(currentArticle);
             updateUI();
