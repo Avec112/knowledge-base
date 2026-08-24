@@ -751,7 +751,10 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         getElement().executeJs(
             "return navigator.clipboard.writeText(window.location.origin + '/knowledge/' + $0)",
             currentArticle.getSlug()
-        ).then(result -> Notification.show("Lenke kopiert"));
+        ).then(
+            result -> Notification.show("Lenke kopiert"),
+            error -> Notification.show("Kunne ikke kopiere lenken")
+        );
     }
 
     private void performArticleDelete(Article article) {
