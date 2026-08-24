@@ -256,10 +256,13 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         title.addClassName("kb-recent-item-title");
         title.addClickListener(event -> getUI().ifPresent(ui -> ui.navigate("knowledge/" + article.getSlug())));
 
+        Span user = new Span(article.getUpdatedBy() != null ? formatUserDisplay(article.getUpdatedBy()) : "");
+        user.addClassName("kb-recent-item-user");
+
         Span date = new Span(article.getUpdatedAt() != null ? article.getUpdatedAt().format(EXPORT_DATE_FORMAT) : "");
         date.addClassName("kb-recent-item-date");
 
-        row.add(title, date);
+        row.add(title, user, date);
         row.setFlexGrow(1, title);
         return row;
     }
@@ -602,7 +605,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         recentlyUpdatedPanel.setSpacing(false);
         recentlyUpdatedPanel.setWidthFull();
         recentlyUpdatedPanel.setVisible(false);
-        articleColumn.add(titleDisplay, metadataDisplay, markdownPreview, recentlyUpdatedPanel);
+        articleColumn.add(titleDisplay, metadataDisplay, recentlyUpdatedPanel, markdownPreview);
 
         buildEditor();
 
