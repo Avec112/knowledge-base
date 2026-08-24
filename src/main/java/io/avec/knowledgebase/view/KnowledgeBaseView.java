@@ -144,7 +144,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
                 highlightSelectedArticle(null);
             } else {
                 // Load article by slug
-                articleService.findBySlug(slug).ifPresentOrElse(
+                articleService.findVisibleBySlug(slug).ifPresentOrElse(
                     article -> {
                         currentArticle = article;
                         highlightSelectedArticle(article);
@@ -240,7 +240,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             }
 
             // Add uncategorized articles at the end
-            List<Article> uncategorized = articleService.findUncategorized();
+            List<Article> uncategorized = articleService.findVisibleUncategorized();
             if (!uncategorized.isEmpty()) {
                 WikiType uncategorizedNode = WikiType.section("Uncategorized");
                 treeData.addItem(null, uncategorizedNode);
@@ -409,11 +409,8 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     }
 
     private void addUncategorizedEntries(ZipOutputStream zip) throws IOException {
-        List<Article> uncategorized = articleService.findUncategorized();
+        List<Article> uncategorized = articleService.findVisibleUncategorized();
         for (Article article : uncategorized) {
-            if (!isAdmin && !article.isPublished()) {
-                continue;
-            }
             String fileName = buildArticleFileName(article);
             writeZipEntry(zip, fileName, article.getContent());
         }
@@ -876,7 +873,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     }
 
     private String loadMarkdownHelpContent() {
-        return articleService.findBySlug(MARKDOWN_HELP_SLUG)
+        return articleService.findVisibleBySlug(MARKDOWN_HELP_SLUG)
             .map(Article::getContent)
             .filter(content -> content != null && !content.isBlank())
             .orElse("""

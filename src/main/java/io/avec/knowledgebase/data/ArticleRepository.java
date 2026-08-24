@@ -21,7 +21,11 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     List<Article> findByCategoryIsNullOrderBySortOrder();
 
+    List<Article> findByCategoryIsNullAndStatusOrderBySortOrder(ArticleStatus status);
+
     Optional<Article> findBySlug(String slug);
+
+    Optional<Article> findBySlugAndStatus(String slug, ArticleStatus status);
 
     boolean existsBySlug(String slug);
 

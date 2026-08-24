@@ -4,6 +4,9 @@ import io.avec.knowledgebase.data.Article;
 import io.avec.knowledgebase.data.ArticleRepository;
 import io.avec.knowledgebase.data.ArticleStatus;
 import io.avec.knowledgebase.data.Category;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +24,7 @@ public class ArticleService {
         this.articleRepository = articleRepository;
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     public List<Article> findAll() {
         return articleRepository.findAllByOrderByUpdatedAtDesc();
     }
@@ -29,6 +33,7 @@ public class ArticleService {
         return articleRepository.findByStatusOrderByUpdatedAtDesc(ArticleStatus.PUBLISHED);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     public List<Article> findByCategory(Category category) {
         return articleRepository.findByCategoryOrderBySortOrder(category);
     }
@@ -37,10 +42,18 @@ public class ArticleService {
         return articleRepository.findByCategoryAndStatusOrderBySortOrder(category, ArticleStatus.PUBLISHED);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     public List<Article> findUncategorized() {
         return articleRepository.findByCategoryIsNullOrderBySortOrder();
     }
 
+    public List<Article> findVisibleUncategorized() {
+        return canViewDrafts()
+            ? articleRepository.findByCategoryIsNullOrderBySortOrder()
+            : articleRepository.findByCategoryIsNullAndStatusOrderBySortOrder(ArticleStatus.PUBLISHED);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     public List<Article> search(String query) {
         if (query == null || query.isBlank()) return List.of();
         return articleRepository.searchByTitleOrContent(query.trim());
@@ -51,15 +64,30 @@ public class ArticleService {
         return articleRepository.searchByTitleOrContentAndStatus(query.trim(), ArticleStatus.PUBLISHED);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     public Optional<Article> findById(Long id) {
         return articleRepository.findById(id);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     public Optional<Article> findBySlug(String slug) {
         return articleRepository.findBySlug(slug);
     }
 
+    public Optional<Article> findVisibleBySlug(String slug) {
+        return canViewDrafts()
+            ? articleRepository.findBySlug(slug)
+            : articleRepository.findBySlugAndStatus(slug, ArticleStatus.PUBLISHED);
+    }
+
+    private boolean canViewDrafts() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.getAuthorities().stream()
+            .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+    }
+
     @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public Article save(Article article) {
         if (article.getStatus() == null) {
             article.setStatus(ArticleStatus.DRAFT);
@@ -72,6 +100,7 @@ public class ArticleService {
     }
 
     @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(Article article) {
         articleRepository.delete(article);
     }

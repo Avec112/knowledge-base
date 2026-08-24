@@ -2,6 +2,7 @@ package io.avec.knowledgebase.service;
 
 import io.avec.knowledgebase.data.Category;
 import io.avec.knowledgebase.data.CategoryRepository;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +49,7 @@ public class CategoryService {
     }
 
     @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public Category save(Category category) {
         String normalizedName = category.getName() == null ? "" : category.getName().trim();
         if (normalizedName.isEmpty()) {
@@ -72,11 +74,13 @@ public class CategoryService {
     }
 
     @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(Category category) {
         categoryRepository.delete(category);
     }
 
     @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public void reorderRootCategories(List<Category> orderedRootCategories) {
         for (int i = 0; i < orderedRootCategories.size(); i++) {
             Category category = orderedRootCategories.get(i);
