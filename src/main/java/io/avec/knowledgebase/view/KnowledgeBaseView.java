@@ -44,13 +44,12 @@ import io.avec.knowledgebase.service.ImportResult;
 import io.avec.knowledgebase.service.KnowledgeBaseExportService;
 import io.avec.knowledgebase.service.KnowledgeBaseImportService;
 import io.avec.security.AuthenticatedUser;
+import io.avec.views.MainLayout;
 import jakarta.annotation.security.PermitAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.vaadin.lineawesome.LineAwesomeIconUrl;
-import com.vaadin.flow.component.avatar.Avatar;
 import com.vaadin.flow.component.markdown.Markdown;
-import com.vaadin.flow.server.StreamResource;
 import com.vaadin.flow.server.streams.DownloadHandler;
 import com.vaadin.flow.server.streams.DownloadResponse;
 
@@ -73,7 +72,7 @@ import java.util.function.Consumer;
 
 
 @PageTitle("KnowledgeBase")
-@Route(value = "knowledge", autoLayout = false)
+@Route(value = "knowledge", layout = MainLayout.class)
 @Menu(order = 0, icon = LineAwesomeIconUrl.GRADUATION_CAP_SOLID)
 @PermitAll
 public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter<String>, BeforeLeaveObserver {
@@ -129,10 +128,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final Button downloadArticleButton = new Button();
 
     private final VerticalLayout sidebar = new VerticalLayout();
-    private final Span brandTitle = new Span("KnowledgeBase");
-    private final Span userNameLabel = new Span();
-    private final Button signOutButton = new Button(VaadinIcon.SIGN_OUT.create());
-    private final Anchor otherStuffLink = new Anchor("other-stuff", "");
+    private final HorizontalLayout sidebarFooter = new HorizontalLayout();
     private final VerticalLayout editorLayout = new VerticalLayout();
     private final Div articleColumn = new Div();
     private final HorizontalLayout crumbs = new HorizontalLayout();
@@ -313,11 +309,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         articleTree.setWidthFull();
         articleTree.addThemeVariants(GridVariant.LUMO_NO_BORDER, GridVariant.LUMO_NO_ROW_BORDERS, GridVariant.LUMO_COMPACT);
 
-        HorizontalLayout footer = new HorizontalLayout();
-        footer.addClassName("kb-sidebar-footer");
-        footer.setWidthFull();
-        footer.setPadding(false);
-        footer.setSpacing(false);
+        sidebarFooter.addClassName("kb-sidebar-footer");
+        sidebarFooter.setWidthFull();
+        sidebarFooter.setPadding(false);
+        sidebarFooter.setSpacing(false);
+        sidebarFooter.setVisible(isAdmin);
 
         createButton.setIcon(VaadinIcon.PLUS.create());
         createButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
@@ -329,64 +325,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         createCategoryButton.addClickListener(e -> openCreateCategoryDialog());
         createCategoryButton.setVisible(false);
 
-        footer.add(createButton, createCategoryButton);
+        sidebarFooter.add(createButton, createCategoryButton);
 
-        sidebar.add(createBrandHeader(), top, articleTree, footer, createUserRow());
+        sidebar.add(top, articleTree, sidebarFooter);
         sidebar.setFlexGrow(1, articleTree);
         return sidebar;
-    }
-
-    private HorizontalLayout createBrandHeader() {
-        HorizontalLayout brand = new HorizontalLayout();
-        brand.addClassName("kb-brand");
-        brand.setWidthFull();
-        brand.setPadding(false);
-        brand.setSpacing(false);
-        brand.setAlignItems(Alignment.CENTER);
-
-        Span brandMark = new Span(VaadinIcon.BOOK.create());
-        brandMark.addClassName("kb-brand-mark");
-
-        Button otherStuffButton = new Button(VaadinIcon.GRID_SMALL.create());
-        otherStuffButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE, ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ICON);
-        otherStuffButton.getElement().setProperty("title", "Other stuff");
-        otherStuffButton.getElement().setAttribute("aria-label", "Other stuff");
-        otherStuffLink.add(otherStuffButton);
-
-        brand.add(brandMark, brandTitle, otherStuffLink);
-        brand.setFlexGrow(1, brandTitle);
-        return brand;
-    }
-
-    private HorizontalLayout createUserRow() {
-        HorizontalLayout userRow = new HorizontalLayout();
-        userRow.addClassName("kb-user-row");
-        userRow.setWidthFull();
-        userRow.setPadding(false);
-        userRow.setSpacing(false);
-        userRow.setAlignItems(Alignment.CENTER);
-
-        Avatar avatar = new Avatar();
-        avatar.setThemeName("xsmall");
-        avatar.getElement().setAttribute("tabindex", "-1");
-        userNameLabel.addClassName("kb-user-name");
-        authenticatedUser.get().ifPresent(user -> {
-            avatar.setName(user.getName());
-            userNameLabel.setText(user.getName());
-            if (user.getProfilePicture() != null) {
-                avatar.setImageResource(new StreamResource("profile-pic",
-                    () -> new ByteArrayInputStream(user.getProfilePicture())));
-            }
-        });
-
-        signOutButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE, ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ICON);
-        signOutButton.getElement().setProperty("title", "Sign out");
-        signOutButton.getElement().setAttribute("aria-label", "Sign out");
-        signOutButton.addClickListener(e -> authenticatedUser.logout());
-
-        userRow.add(avatar, userNameLabel, signOutButton);
-        userRow.setFlexGrow(1, userNameLabel);
-        return userRow;
     }
 
     private HorizontalLayout createContentHeader() {

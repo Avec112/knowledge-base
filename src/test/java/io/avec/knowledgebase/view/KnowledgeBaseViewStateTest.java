@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.markdown.Markdown;
 import com.vaadin.flow.component.treegrid.TreeGrid;
 import com.vaadin.flow.router.BeforeEvent;
@@ -111,6 +112,34 @@ class KnowledgeBaseViewStateTest {
         assertThat(titleDisplay.getText()).isEqualTo("Welcome to KnowledgeBase");
         assertThat(markdownPreview.getContent()).doesNotContain("Old content that must disappear");
         assertThat((Object) field("currentArticle")).isNull();
+    }
+
+    @Test
+    void statusFieldShowsReadableLabelsNotEnumNames() {
+        ComboBox<ArticleStatus> statusField = field("statusField");
+
+        assertThat(statusField.getItemLabelGenerator().apply(ArticleStatus.DRAFT)).isEqualTo("Draft");
+        assertThat(statusField.getItemLabelGenerator().apply(ArticleStatus.PUBLISHED)).isEqualTo("Published");
+    }
+
+    @Test
+    void sidebarFooterIsVisibleForAdmins() {
+        HorizontalLayout footer = field("sidebarFooter");
+
+        assertThat(footer.isVisible()).isTrue();
+    }
+
+    @Test
+    void sidebarFooterIsHiddenForReadOnlyUsers() {
+        User reader = new User();
+        reader.setRoles(Set.of(Role.USER));
+        when(authenticatedUser.get()).thenReturn(Optional.of(reader));
+
+        KnowledgeBaseView readerView = new KnowledgeBaseView(
+            articleService, categoryService, exportService, importService, authenticatedUser);
+
+        HorizontalLayout footer = (HorizontalLayout) ReflectionTestUtils.getField(readerView, "sidebarFooter");
+        assertThat(footer.isVisible()).isFalse();
     }
 
     private Article article(String slug, String title, String content) {
