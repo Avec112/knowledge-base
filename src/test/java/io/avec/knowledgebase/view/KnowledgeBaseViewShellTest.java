@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.AbstractStreamResource;
@@ -95,6 +96,13 @@ class KnowledgeBaseViewShellTest {
         signOutButton.click();
 
         verify(authenticatedUser).logout();
+    }
+
+    @Test
+    void sidebarLinksBackToTheRestOfTheApplication() {
+        Anchor otherStuffLink = field("otherStuffLink");
+
+        assertThat(otherStuffLink.getHref()).isEqualTo("other-stuff");
     }
 
     @Test

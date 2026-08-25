@@ -132,6 +132,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final Span brandTitle = new Span("KnowledgeBase");
     private final Span userNameLabel = new Span();
     private final Button signOutButton = new Button(VaadinIcon.SIGN_OUT.create());
+    private final Anchor otherStuffLink = new Anchor("other-stuff", "");
     private final VerticalLayout editorLayout = new VerticalLayout();
     private final Div articleColumn = new Div();
     private final HorizontalLayout crumbs = new HorizontalLayout();
@@ -346,7 +347,14 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         Span brandMark = new Span(VaadinIcon.BOOK.create());
         brandMark.addClassName("kb-brand-mark");
 
-        brand.add(brandMark, brandTitle);
+        Button otherStuffButton = new Button(VaadinIcon.GRID_SMALL.create());
+        otherStuffButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE, ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ICON);
+        otherStuffButton.getElement().setProperty("title", "Other stuff");
+        otherStuffButton.getElement().setAttribute("aria-label", "Other stuff");
+        otherStuffLink.add(otherStuffButton);
+
+        brand.add(brandMark, brandTitle, otherStuffLink);
+        brand.setFlexGrow(1, brandTitle);
         return brand;
     }
 
