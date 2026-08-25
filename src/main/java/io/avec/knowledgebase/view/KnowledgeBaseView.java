@@ -509,10 +509,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     }
 
     private String detachTarget() {
+        // The marker lets MainLayout collapse the drawer in the detached window
         if (currentArticle != null && currentArticle.getSlug() != null) {
-            return "knowledge/" + currentArticle.getSlug();
+            return "knowledge/" + currentArticle.getSlug() + "?detached";
         }
-        return "knowledge";
+        return "knowledge?detached";
     }
 
     private DownloadHandler createExportHandler() {

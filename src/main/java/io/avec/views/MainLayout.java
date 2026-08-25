@@ -127,6 +127,11 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     @Override
     public void afterNavigation(AfterNavigationEvent event) {
         viewTitle.setText(getCurrentPageTitle());
+        // Windows opened via the knowledge base detach button focus on the
+        // content, so the drawer starts collapsed there.
+        if (event.getLocation().getQueryParameters().getParameters().containsKey("detached")) {
+            setDrawerOpened(false);
+        }
     }
 
     private String getCurrentPageTitle() {

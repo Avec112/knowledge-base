@@ -166,7 +166,7 @@ class KnowledgeBaseViewStateTest {
     void detachTargetIsTheKnowledgeBaseRootByDefault() {
         String target = ReflectionTestUtils.invokeMethod(view, "detachTarget");
 
-        assertThat(target).isEqualTo("knowledge");
+        assertThat(target).isEqualTo("knowledge?detached");
     }
 
     @Test
@@ -177,7 +177,7 @@ class KnowledgeBaseViewStateTest {
         view.setParameter(mock(BeforeEvent.class), "destination");
 
         String target = ReflectionTestUtils.invokeMethod(view, "detachTarget");
-        assertThat(target).isEqualTo("knowledge/destination");
+        assertThat(target).isEqualTo("knowledge/destination?detached");
     }
 
     private Article article(String slug, String title, String content) {
