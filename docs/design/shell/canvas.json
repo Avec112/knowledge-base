@@ -1,15 +1,14 @@
 {
   "artboards": [
-    { "file": "Dagens.dc.html", "x": 0, "y": 0, "w": 1280, "h": 840, "title": "Dagens shell" },
-    { "file": "Main.dc.html", "x": 1420, "y": 0, "w": 1280, "h": 840, "title": "Forslag: integrert shell" }
+    { "file": "Dagens.dc.html", "x": 0, "y": 0, "w": 1280, "h": 840, "title": "Før: utgangspunktet" },
+    { "file": "Main.dc.html", "x": 1420, "y": 0, "w": 1280, "h": 840, "title": "Etter: hovedvindu" },
+    { "file": "Losrevet.dc.html", "x": 2840, "y": 0, "w": 1180, "h": 800, "title": "Etter: løsrevet vindu" }
   ],
   "annotations": [
-    { "id": "dobbel-navigasjon", "x": -410, "y": 0, "w": 320, "text": "Det som skurrer mest: dobbel navigasjon.\n\nAppLayout-draweren (MainLayout) ligger utenpå KB-viewets egen sidebar – to menyer side om side. Topplinjen på 50 px gjentar bare tittelen «KnowledgeBase» som allerede står i draweren og i fanen." },
-    { "id": "app-navn", "x": -410, "y": 300, "w": 320, "text": "Appen heter fortsatt «App».\n\nBåde i drawer-headeren (MainLayout) og som tittel på login-skjermen (LoginView). Rest fra Vaadin-starteren – bør hete KnowledgeBase begge steder." },
-    { "id": "other-stuff", "x": -410, "y": 560, "w": 320, "text": "«Other stuff» i menyen er starter-plassholderen (plantebilde + Red Hat-ikon) – og den er @AnonymousAllowed mens resten krever innlogging. Bør fjernes; da forsvinner også behovet for drawer-navigasjonen." },
-    { "id": "smaating", "x": 0, "y": 940, "w": 620, "text": "Småting som også skurrer:\n• For vanlige brukere (ikke admin) er sidebar-footeren en tom stripe med border – knappene er bare skjult.\n• Status-nedtrekket i editoren viser enum-navnene DRAFT/PUBLISHED i caps, mens badgene ellers viser «Published»/«Draft».\n• Velkomstsiden heter «Velkommen» i treet, men «Welcome to KnowledgeBase» i innholdet." },
-    { "id": "sprakmiks", "x": 1420, "y": -230, "w": 480, "text": "Språkmiks: «Velkommen» (tremenyen) og «Nylig oppdatert» (forsiden) er norsk, mens resten av UI-et er engelsk («New article», «Search articles…», «Collapse all»). Velg ett språk – forslaget viser engelsk, men norsk går like fint." },
-    { "id": "forslaget", "x": 2790, "y": 0, "w": 340, "text": "Forslaget: dropp AppLayout-shellet for KB-viewet.\n\n• App-navn med merke øverst i sidebaren (erstatter drawer-header + topplinje)\n• Brukeren flyttes til nederst i sidebaren (avatar + navn + logg ut) – footeren er aldri tom\n• ~50 px mer høyde til innholdet, én meny i stedet for to\n• «Other stuff» og draweren fjernes; login-tittelen blir «KnowledgeBase»" }
+    { "id": "historikk", "x": -410, "y": 0, "w": 320, "text": "Gjennomgangen fant: appen het «App», «Other stuff»-plassholder i menyen, opprett-knappene gjemt i bunnen av sidebaren, DRAFT/PUBLISHED i caps og tom footer-stripe for lesebrukere.\n\nTo retninger ble prøvd og forkastet underveis (standalone shell uten drawer; automatisk drawer-lukking) før løsningen til høyre landet. Merget til main 2026-08-25." },
+    { "id": "hovedvindu", "x": 1420, "y": -230, "w": 460, "text": "Hovedvinduet beholder Vaadins AppLayout-idiom: draweren oppfører seg helt som standard.\n\n• Appen heter KnowledgeBase i drawer og på login\n• «+ New category» / «+ New article» flyttet til en topprad i sidebaren, på linje med Edit/Delete-raden (skjules for lesebrukere)\n• Status-nedtrekket viser «Draft»/«Published»\n• Ny løsriv-knapp ytterst i headeren (external-link-ikonet)" },
+    { "id": "losrevet", "x": 2840, "y": -230, "w": 440, "text": "Løsriv-knappen åpner artikkelen i et eget nettleservindu (window.open med vindus-features, 1280×900) på knowledge/<slug>?detached.\n\n?detached-parameteret får MainLayout til å starte med sammenklappet drawer – KB er fokuset her, og hamburgeren åpner menyen ved behov. Wikien lever dermed parallelt med resten av appen." },
+    { "id": "gjenstaar", "x": 0, "y": 940, "w": 620, "text": "Fortsatt åpne beslutninger:\n• Språkmiks – «Velkommen» og «Nylig oppdatert» er norsk, resten av UI-et engelsk. Velg ett språk.\n• «Other stuff»-plassholderen (plantebilde, @AnonymousAllowed) ligger fortsatt i menyen." }
   ],
   "launch": { "view": "canvas" }
 }
