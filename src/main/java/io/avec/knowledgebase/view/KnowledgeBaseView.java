@@ -240,7 +240,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             return;
         }
 
-        H3 heading = new H3("Nylig oppdatert");
+        H3 heading = new H3("Recently updated");
         heading.addClassName("kb-recent-heading");
         recentlyUpdatedPanel.add(heading);
         recentArticles.forEach(article -> recentlyUpdatedPanel.add(createRecentArticleRow(article)));
@@ -447,7 +447,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         TreeData<WikiType> treeData = new TreeData<>();
         refreshCategoryFieldItems();
 
-        welcomeNode = WikiType.welcome("Velkommen", WELCOME_SLUG);
+        welcomeNode = WikiType.welcome("Welcome", WELCOME_SLUG);
         treeData.addItem(null, welcomeNode);
         parentByNode.put(welcomeNode, null);
         nodeBySlug.put(WELCOME_SLUG, welcomeNode);
@@ -862,7 +862,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         try {
             currentArticle = articleService.save(currentArticle);
             refreshArticleList();
-            Notification.show("Lagret", 2000, Notification.Position.BOTTOM_END);
+            Notification.show("Saved", 2000, Notification.Position.BOTTOM_END);
         } catch (Exception e) {
             Notification.show("Error saving article: " + e.getMessage());
         }
@@ -937,11 +937,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         Article article = currentArticle;
         String title = article.getTitle() != null && !article.getTitle().isBlank() ? article.getTitle() : "Untitled";
         ConfirmDialog dialog = new ConfirmDialog();
-        dialog.setHeader("Er du sikker?");
-        dialog.setText("Slett artikkelen \"" + title + "\"?");
+        dialog.setHeader("Are you sure?");
+        dialog.setText("Delete the article \"" + title + "\"?");
         dialog.setCancelable(true);
-        dialog.setCancelText("Avbryt");
-        dialog.setConfirmText("Slett");
+        dialog.setCancelText("Cancel");
+        dialog.setConfirmText("Delete");
         dialog.setConfirmButtonTheme("error primary");
         dialog.addConfirmListener(event -> performArticleDelete(article));
         dialog.open();
@@ -956,7 +956,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             currentArticle.getSlug()
         ).then(
             result -> Notification.show("Lenke kopiert"),
-            error -> Notification.show("Kunne ikke kopiere lenken")
+            error -> Notification.show("Could not copy the link")
         );
     }
 
@@ -1079,11 +1079,11 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
         Category category = currentCategory;
         ConfirmDialog dialog = new ConfirmDialog();
-        dialog.setHeader("Er du sikker?");
-        dialog.setText("Slett kategorien \"" + category.getName() + "\"?");
+        dialog.setHeader("Are you sure?");
+        dialog.setText("Delete the category \"" + category.getName() + "\"?");
         dialog.setCancelable(true);
-        dialog.setCancelText("Avbryt");
-        dialog.setConfirmText("Slett");
+        dialog.setCancelText("Cancel");
+        dialog.setConfirmText("Delete");
         dialog.setConfirmButtonTheme("error primary");
         dialog.addConfirmListener(event -> performCategoryDelete(category));
         dialog.open();
@@ -1202,7 +1202,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         } else if (currentCategory != null && currentCategory.getName() != null) {
             currentLabel = currentCategory.getName();
         } else {
-            currentLabel = "Velkommen";
+            currentLabel = "Welcome";
         }
 
         if (categoryLabel != null) {

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.markdown.Markdown;
@@ -178,6 +179,26 @@ class KnowledgeBaseViewStateTest {
 
         String target = ReflectionTestUtils.invokeMethod(view, "detachTarget");
         assertThat(target).isEqualTo("knowledge/destination?detached");
+    }
+
+    @Test
+    void welcomeNodeIsLabelledInEnglish() {
+        Object welcomeNode = field("welcomeNode");
+
+        String label = (String) ReflectionTestUtils.invokeMethod(welcomeNode, "label");
+        assertThat(label).isEqualTo("Welcome");
+    }
+
+    @Test
+    void recentlyUpdatedHeadingIsEnglish() {
+        Article recent = article("recent", "Recent", "Recent content");
+        when(articleService.findRecentVisible()).thenReturn(List.of(recent));
+
+        ReflectionTestUtils.invokeMethod(view, "refreshRecentlyUpdated");
+
+        VerticalLayout panel = field("recentlyUpdatedPanel");
+        H3 heading = (H3) panel.getComponentAt(0);
+        assertThat(heading.getText()).isEqualTo("Recently updated");
     }
 
     private Article article(String slug, String title, String content) {
