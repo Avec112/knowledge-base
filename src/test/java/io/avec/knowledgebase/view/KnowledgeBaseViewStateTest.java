@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
-import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -157,22 +156,28 @@ class KnowledgeBaseViewStateTest {
     }
 
     @Test
-    void detachLinkOpensTheKnowledgeBaseInANewTab() {
-        Anchor detachLink = field("detachLink");
+    void detachButtonIsPresentAndLabelledForANewWindow() {
+        Button detachButton = field("detachButton");
 
-        assertThat(detachLink.getElement().getAttribute("target")).isEqualTo("_blank");
-        assertThat(detachLink.getHref()).isEqualTo("knowledge");
+        assertThat(detachButton.getElement().getAttribute("aria-label")).isEqualTo("Open in new window");
     }
 
     @Test
-    void detachLinkFollowsTheDisplayedArticle() {
+    void detachTargetIsTheKnowledgeBaseRootByDefault() {
+        String target = ReflectionTestUtils.invokeMethod(view, "detachTarget");
+
+        assertThat(target).isEqualTo("knowledge");
+    }
+
+    @Test
+    void detachTargetFollowsTheDisplayedArticle() {
         Article destination = article("destination", "Destination", "Destination content");
         when(articleService.findVisibleBySlug("destination")).thenReturn(Optional.of(destination));
 
         view.setParameter(mock(BeforeEvent.class), "destination");
 
-        Anchor detachLink = field("detachLink");
-        assertThat(detachLink.getHref()).isEqualTo("knowledge/destination");
+        String target = ReflectionTestUtils.invokeMethod(view, "detachTarget");
+        assertThat(target).isEqualTo("knowledge/destination");
     }
 
     private Article article(String slug, String title, String content) {

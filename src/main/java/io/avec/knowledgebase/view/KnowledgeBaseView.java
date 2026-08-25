@@ -129,7 +129,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
 
     private final VerticalLayout sidebar = new VerticalLayout();
     private final HorizontalLayout sidebarActions = new HorizontalLayout();
-    private final Anchor detachLink = new Anchor("knowledge", "");
+    private final Button detachButton = new Button(VaadinIcon.EXTERNAL_LINK.create());
     private final VerticalLayout editorLayout = new VerticalLayout();
     private final Div articleColumn = new Div();
     private final HorizontalLayout crumbs = new HorizontalLayout();
@@ -426,15 +426,14 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         importButton.addClickListener(e -> openImportDialog());
         importButton.setVisible(false);
 
-        Button detachButton = new Button(VaadinIcon.EXTERNAL_LINK.create());
         detachButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ICON);
-        detachButton.getElement().setProperty("title", "Open in new tab");
-        detachButton.getElement().setAttribute("aria-label", "Open in new tab");
-        detachLink.getElement().setAttribute("target", "_blank");
-        detachLink.add(detachButton);
+        detachButton.getElement().setProperty("title", "Open in new window");
+        detachButton.getElement().setAttribute("aria-label", "Open in new window");
+        detachButton.addClickListener(e -> getUI().ifPresent(ui -> ui.getPage().executeJs(
+            "window.open($0, '_blank', 'noopener,width=1280,height=900')", detachTarget())));
 
         actions.add(editCategoryButton, deleteCategoryButton, editButton, duplicateButton, deleteButton, copyLinkButton,
-            downloadArticleLink, headerDivider, exportLink, importButton, detachLink, previewButton, cancelButton, saveButton);
+            downloadArticleLink, headerDivider, exportLink, importButton, detachButton, previewButton, cancelButton, saveButton);
 
         header.add(crumbs, actions);
         return header;
@@ -507,6 +506,13 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         } else {
             articleTree.deselectAll();
         }
+    }
+
+    private String detachTarget() {
+        if (currentArticle != null && currentArticle.getSlug() != null) {
+            return "knowledge/" + currentArticle.getSlug();
+        }
+        return "knowledge";
     }
 
     private DownloadHandler createExportHandler() {
@@ -1118,10 +1124,7 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             exportLink.setVisible(isAdmin && !editMode);
         }
         importButton.setVisible(isAdmin && !editMode);
-        detachLink.setVisible(!editMode);
-        detachLink.setHref(hasArticle && currentArticle.getSlug() != null
-            ? "knowledge/" + currentArticle.getSlug()
-            : "knowledge");
+        detachButton.setVisible(!editMode);
         headerDivider.setVisible(!editMode && isAdmin && (hasArticle || hasCategory));
 
         articleTree.setEnabled(!editMode);
