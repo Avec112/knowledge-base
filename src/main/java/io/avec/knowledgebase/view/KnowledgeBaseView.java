@@ -128,7 +128,8 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
     private final Button downloadArticleButton = new Button();
 
     private final VerticalLayout sidebar = new VerticalLayout();
-    private final HorizontalLayout sidebarFooter = new HorizontalLayout();
+    private final HorizontalLayout sidebarActions = new HorizontalLayout();
+    private final Anchor detachLink = new Anchor("knowledge", "");
     private final VerticalLayout editorLayout = new VerticalLayout();
     private final Div articleColumn = new Div();
     private final HorizontalLayout crumbs = new HorizontalLayout();
@@ -309,11 +310,12 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         articleTree.setWidthFull();
         articleTree.addThemeVariants(GridVariant.LUMO_NO_BORDER, GridVariant.LUMO_NO_ROW_BORDERS, GridVariant.LUMO_COMPACT);
 
-        sidebarFooter.addClassName("kb-sidebar-footer");
-        sidebarFooter.setWidthFull();
-        sidebarFooter.setPadding(false);
-        sidebarFooter.setSpacing(false);
-        sidebarFooter.setVisible(isAdmin);
+        sidebarActions.addClassName("kb-sidebar-actions");
+        sidebarActions.setWidthFull();
+        sidebarActions.setPadding(false);
+        sidebarActions.setSpacing(false);
+        sidebarActions.setAlignItems(Alignment.CENTER);
+        sidebarActions.setVisible(isAdmin);
 
         createButton.setIcon(VaadinIcon.PLUS.create());
         createButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
@@ -325,9 +327,9 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         createCategoryButton.addClickListener(e -> openCreateCategoryDialog());
         createCategoryButton.setVisible(false);
 
-        sidebarFooter.add(createButton, createCategoryButton);
+        sidebarActions.add(createCategoryButton, createButton);
 
-        sidebar.add(top, articleTree, sidebarFooter);
+        sidebar.add(sidebarActions, top, articleTree);
         sidebar.setFlexGrow(1, articleTree);
         return sidebar;
     }
@@ -424,8 +426,15 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
         importButton.addClickListener(e -> openImportDialog());
         importButton.setVisible(false);
 
+        Button detachButton = new Button(VaadinIcon.EXTERNAL_LINK.create());
+        detachButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ICON);
+        detachButton.getElement().setProperty("title", "Open in new tab");
+        detachButton.getElement().setAttribute("aria-label", "Open in new tab");
+        detachLink.getElement().setAttribute("target", "_blank");
+        detachLink.add(detachButton);
+
         actions.add(editCategoryButton, deleteCategoryButton, editButton, duplicateButton, deleteButton, copyLinkButton,
-            downloadArticleLink, headerDivider, exportLink, importButton, previewButton, cancelButton, saveButton);
+            downloadArticleLink, headerDivider, exportLink, importButton, detachLink, previewButton, cancelButton, saveButton);
 
         header.add(crumbs, actions);
         return header;
@@ -1109,6 +1118,10 @@ public class KnowledgeBaseView extends VerticalLayout implements HasUrlParameter
             exportLink.setVisible(isAdmin && !editMode);
         }
         importButton.setVisible(isAdmin && !editMode);
+        detachLink.setVisible(!editMode);
+        detachLink.setHref(hasArticle && currentArticle.getSlug() != null
+            ? "knowledge/" + currentArticle.getSlug()
+            : "knowledge");
         headerDivider.setVisible(!editMode && isAdmin && (hasArticle || hasCategory));
 
         articleTree.setEnabled(!editMode);

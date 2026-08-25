@@ -26,7 +26,6 @@ import com.vaadin.flow.server.menu.MenuConfiguration;
 import com.vaadin.flow.server.menu.MenuEntry;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import io.avec.data.User;
-import io.avec.knowledgebase.view.KnowledgeBaseView;
 import io.avec.security.AuthenticatedUser;
 import java.io.ByteArrayInputStream;
 import java.util.List;
@@ -128,9 +127,6 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     @Override
     public void afterNavigation(AfterNavigationEvent event) {
         viewTitle.setText(getCurrentPageTitle());
-        // The knowledge base brings its own sidebar; collapse the drawer there
-        // and let the hamburger be the way in and out.
-        setDrawerOpened(!(getContent() instanceof KnowledgeBaseView));
     }
 
     private String getCurrentPageTitle() {

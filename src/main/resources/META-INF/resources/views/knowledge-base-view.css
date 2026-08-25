@@ -46,9 +46,14 @@
   box-shadow: inset 3px 0 0 0 var(--lumo-primary-color);
 }
 
-.knowledge-base-view .kb-sidebar-footer {
-  border-top: 1px solid var(--lumo-contrast-10pct);
-  padding: var(--lumo-space-xs) var(--lumo-space-s);
+/* Create actions aligned with the content header row */
+.knowledge-base-view .kb-sidebar-actions {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  min-height: 48px;
+  align-items: center;
+  border-bottom: 1px solid var(--lumo-contrast-10pct);
+  padding: 0 var(--lumo-space-s);
   gap: var(--lumo-space-xs);
 }
 

@@ -8,8 +8,10 @@ import static org.mockito.Mockito.when;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.markdown.Markdown;
 import com.vaadin.flow.component.treegrid.TreeGrid;
 import com.vaadin.flow.router.BeforeEvent;
@@ -123,14 +125,26 @@ class KnowledgeBaseViewStateTest {
     }
 
     @Test
-    void sidebarFooterIsVisibleForAdmins() {
-        HorizontalLayout footer = field("sidebarFooter");
+    void sidebarActionsSitAtTheTopWithNewCategoryFirst() {
+        VerticalLayout sidebar = field("sidebar");
+        HorizontalLayout actions = field("sidebarActions");
+        Button createCategoryButton = field("createCategoryButton");
+        Button createButton = field("createButton");
 
-        assertThat(footer.isVisible()).isTrue();
+        assertThat(sidebar.getComponentAt(0)).isSameAs(actions);
+        assertThat(actions.getComponentAt(0)).isSameAs(createCategoryButton);
+        assertThat(actions.getComponentAt(1)).isSameAs(createButton);
     }
 
     @Test
-    void sidebarFooterIsHiddenForReadOnlyUsers() {
+    void sidebarActionsAreVisibleForAdmins() {
+        HorizontalLayout actions = field("sidebarActions");
+
+        assertThat(actions.isVisible()).isTrue();
+    }
+
+    @Test
+    void sidebarActionsAreHiddenForReadOnlyUsers() {
         User reader = new User();
         reader.setRoles(Set.of(Role.USER));
         when(authenticatedUser.get()).thenReturn(Optional.of(reader));
@@ -138,8 +152,27 @@ class KnowledgeBaseViewStateTest {
         KnowledgeBaseView readerView = new KnowledgeBaseView(
             articleService, categoryService, exportService, importService, authenticatedUser);
 
-        HorizontalLayout footer = (HorizontalLayout) ReflectionTestUtils.getField(readerView, "sidebarFooter");
-        assertThat(footer.isVisible()).isFalse();
+        HorizontalLayout actions = (HorizontalLayout) ReflectionTestUtils.getField(readerView, "sidebarActions");
+        assertThat(actions.isVisible()).isFalse();
+    }
+
+    @Test
+    void detachLinkOpensTheKnowledgeBaseInANewTab() {
+        Anchor detachLink = field("detachLink");
+
+        assertThat(detachLink.getElement().getAttribute("target")).isEqualTo("_blank");
+        assertThat(detachLink.getHref()).isEqualTo("knowledge");
+    }
+
+    @Test
+    void detachLinkFollowsTheDisplayedArticle() {
+        Article destination = article("destination", "Destination", "Destination content");
+        when(articleService.findVisibleBySlug("destination")).thenReturn(Optional.of(destination));
+
+        view.setParameter(mock(BeforeEvent.class), "destination");
+
+        Anchor detachLink = field("detachLink");
+        assertThat(detachLink.getHref()).isEqualTo("knowledge/destination");
     }
 
     private Article article(String slug, String title, String content) {
